@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sun } from "lucide-react"
+import { signInWithEmail, signUp, setAuthCookies } from "@/lib/auth"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,66 +18,35 @@ export default function LoginPage() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const { createClient } = await import("@/lib/supabase")
-    const supabase = createClient()
-
     setLoading(true)
     setError(null)
     setMessage(null)
 
-    const timeoutId = setTimeout(() => {
-      console.error("Request timeout after 30 seconds")
-      setError("請求超時，請稍後再試")
-      setLoading(false)
-    }, 30000)
-
     try {
       if (isSignUp) {
         console.log("Attempting sign up for:", email)
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
-        console.log("Sign up response:", data, error)
-        clearTimeout(timeoutId)
+        const data = await signUp(email, password)
+        console.log("Sign up response:", data)
 
-        if (error) {
-          console.error("Sign up error:", error)
-          setError(error.message)
-          setLoading(false)
-          return
-        }
-
-        if (data.user && !data.session) {
+        if (data.confirmation_sent_at) {
           setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
-          setLoading(false)
-        } else if (data.session) {
-          console.log("Sign up successful with session, redirecting...")
+        } else {
+          setAuthCookies(data as unknown as string, "")
           window.location.href = "/"
         }
       } else {
         console.log("Attempting sign in for:", email)
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        console.log("Sign in response:", data, error)
-        clearTimeout(timeoutId)
+        const data = await signInWithEmail(email, password)
+        console.log("Sign in response:", data)
 
-        if (error) {
-          console.error("Sign in error:", error)
-          setError(error.message)
-          setLoading(false)
-          return
-        }
-
+        setAuthCookies(data.access_token, data.refresh_token)
         console.log("Sign in successful, redirecting...")
         window.location.href = "/"
       }
     } catch (err) {
-      clearTimeout(timeoutId)
-      console.error("Unexpected auth error:", err)
+      console.error("Auth error:", err)
       setError(err instanceof Error ? err.message : "發生錯誤")
+    } finally {
       setLoading(false)
     }
   }
@@ -84,6 +54,7 @@ export default function LoginPage() {
   const handleGoogleAuth = async () => {
     setLoading(true)
     setError(null)
+
     const { createClient } = await import("@/lib/supabase")
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({

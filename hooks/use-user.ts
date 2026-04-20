@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/database"
+import { getAccessTokenFromCookie, clearAuthCookies } from "@/lib/auth"
 
 export function useUser() {
   const [user, setUser] = useState<User | null>(null)
@@ -51,6 +52,8 @@ export function useUser() {
   }, [])
 
   const signOut = async () => {
+    clearAuthCookies()
+    const { createClient } = await import("@/lib/supabase")
     const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = "/login"
