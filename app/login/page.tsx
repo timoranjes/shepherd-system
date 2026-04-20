@@ -36,7 +36,7 @@ export default function LoginPage() {
         })
         clearTimeout(timeoutId)
         if (error) {
-          if (error.message.includes("already registered") || error.message.includes("already exists")) {
+          if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("duplicate")) {
             setError("此電子郵件已被註冊，請直接登入或使用 Google 登入")
           } else {
             throw error
@@ -44,6 +44,11 @@ export default function LoginPage() {
           return
         }
         if (data.user && !data.session) {
+          const { data: existingUser } = await supabase.auth.getUser()
+          if (existingUser.user) {
+            setError("此電子郵件已被註冊，請直接登入或使用 Google 登入")
+            return
+          }
           setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
         } else if (data.session) {
           window.location.href = "/"
@@ -129,6 +134,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
               className="bg-background"
             />
             <Input
@@ -138,6 +144,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              autoComplete="current-password"
               className="bg-background"
             />
             <Button type="submit" className="w-full" disabled={loading}>
