@@ -30,20 +30,42 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         })
         clearTimeout(timeoutId)
-        if (error) throw error
-        setMessage("註冊成功！請查看郵箱確認郵件。")
+        if (error) {
+          if (error.message.includes("already registered") || error.message.includes("already exists")) {
+            setError("此電子郵件已被註冊，請直接登入或使用 Google 登入")
+          } else {
+            throw error
+          }
+          return
+        }
+        if (data.user && !data.session) {
+          setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
+        } else if (data.session) {
+          window.location.href = "/"
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         clearTimeout(timeoutId)
-        if (error) throw error
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            setError("電子郵件或密碼錯誤，請重新輸入")
+          } else if (error.message.includes("Email not confirmed")) {
+            setError("請先確認您的電子郵件才能登入")
+          } else if (error.message.includes("No user")) {
+            setError("此電子郵件尚未註冊，請先註冊")
+          } else {
+            throw error
+          }
+          return
+        }
         console.log("Login successful:", data.user?.email)
         window.location.href = "/"
       }
@@ -67,8 +89,11 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
-    if (error) setError(error.message)
-    setLoading(false)
+    if (error) {
+      console.error("Google auth error:", error)
+      setError("Google 登入失敗，請稍後再試")
+      setLoading(false)
+    }
   }
 
   return (
