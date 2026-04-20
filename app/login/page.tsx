@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sun } from "lucide-react"
-import { signInWithEmail, signUp, setAuthCookies } from "@/lib/auth"
+import { signInWithEmail, signUp } from "@/lib/auth"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -31,7 +31,6 @@ export default function LoginPage() {
         if (data.confirmation_sent_at) {
           setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
         } else {
-          setAuthCookies(data as unknown as string, "")
           window.location.href = "/"
         }
       } else {
@@ -39,7 +38,15 @@ export default function LoginPage() {
         const data = await signInWithEmail(email, password)
         console.log("Sign in response:", data)
 
-        setAuthCookies(data.access_token, data.refresh_token)
+        await fetch('/api/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+          }),
+        })
+
         console.log("Sign in successful, redirecting...")
         window.location.href = "/"
       }
