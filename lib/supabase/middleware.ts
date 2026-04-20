@@ -23,16 +23,21 @@ async function getUserFromToken(accessToken: string) {
   }
 }
 
+function getPathname(request: NextRequest): string {
+  const url = new URL(request.url)
+  return url.pathname
+}
+
 export async function updateSession(request: NextRequest) {
   const accessToken = request.cookies.get('sb-access-token')?.value
+  const pathname = getPathname(request)
 
-  const isLoginPage = request.nextUrl.pathname === '/login'
-  const isCallbackPage = request.nextUrl.pathname === '/auth/callback'
+  const isLoginPage = pathname === '/login'
+  const isCallbackPage = pathname === '/auth/callback'
   const isPublicRoute = isLoginPage || isCallbackPage
 
   if (!accessToken && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    const url = new URL('/login', request.url)
     return NextResponse.redirect(url)
   }
 
@@ -42,18 +47,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    const url = new URL('/login', request.url)
     return NextResponse.redirect(url)
   }
 
   if (user && isLoginPage) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
+    const url = new URL('/', request.url)
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next({
-    request,
-  })
+  return NextResponse.next()
 }
