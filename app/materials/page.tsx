@@ -272,7 +272,7 @@ export default function MaterialsPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40">
         <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
           {navItems.map((item) => (
             <Link

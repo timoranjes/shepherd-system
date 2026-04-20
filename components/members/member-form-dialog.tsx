@@ -7,8 +7,6 @@ import { SelectField } from "@/components/ui/select-field"
 import { createClient } from "@/lib/supabase"
 import type { Member, Hierarchy } from "@/types/database"
 
-type Language = "zh-Hant" | "zh-Hans"
-
 interface MemberFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -46,16 +44,12 @@ export function MemberFormDialog({
   const [loading, setLoading] = useState(false)
   const [hierarchies, setHierarchies] = useState<Hierarchy[]>([])
   const [form, setForm] = useState({
-    name_zh_hant: "",
-    name_zh_hans: "",
+    name: "",
     phone: "",
-    address_zh_hant: "",
-    address_zh_hans: "",
-    occupation_zh_hant: "",
-    occupation_zh_hans: "",
+    address: "",
+    occupation: "",
     birthday: "",
-    notes_zh_hant: "",
-    notes_zh_hans: "",
+    notes: "",
     type: "gospel" as "gospel" | "new_believer",
     status: "",
     hierarchy_id: "",
@@ -86,32 +80,24 @@ export function MemberFormDialog({
   useEffect(() => {
     if (member) {
       setForm({
-        name_zh_hant: member.name_zh_hant,
-        name_zh_hans: member.name_zh_hans,
+        name: member.name_zh_hant || member.name_zh_hans || "",
         phone: member.phone || "",
-        address_zh_hant: member.address_zh_hant || "",
-        address_zh_hans: member.address_zh_hans || "",
-        occupation_zh_hant: member.occupation_zh_hant || "",
-        occupation_zh_hans: member.occupation_zh_hans || "",
+        address: member.address_zh_hant || member.address_zh_hans || "",
+        occupation: member.occupation_zh_hant || member.occupation_zh_hans || "",
         birthday: member.birthday || "",
-        notes_zh_hant: member.notes_zh_hant || "",
-        notes_zh_hans: member.notes_zh_hans || "",
+        notes: member.notes_zh_hant || member.notes_zh_hans || "",
         type: member.type,
         status: member.status || "",
         hierarchy_id: member.hierarchy_id,
       })
     } else {
       setForm({
-        name_zh_hant: "",
-        name_zh_hans: "",
+        name: "",
         phone: "",
-        address_zh_hant: "",
-        address_zh_hans: "",
-        occupation_zh_hant: "",
-        occupation_zh_hans: "",
+        address: "",
+        occupation: "",
         birthday: "",
-        notes_zh_hant: "",
-        notes_zh_hans: "",
+        notes: "",
         type: "gospel",
         status: "",
         hierarchy_id: hierarchyIds[0] || "",
@@ -123,8 +109,8 @@ export function MemberFormDialog({
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {}
 
-    if (!form.name_zh_hant.trim()) {
-      newErrors.name_zh_hant = "姓名為必填欄位"
+    if (!form.name.trim()) {
+      newErrors.name = "姓名為必填欄位"
     }
 
     if (!form.hierarchy_id) {
@@ -144,16 +130,16 @@ export function MemberFormDialog({
       const { data: { user } } = await supabase.auth.getUser()
 
       const payload = {
-        name_zh_hant: form.name_zh_hant,
-        name_zh_hans: form.name_zh_hans || form.name_zh_hant,
+        name_zh_hant: form.name,
+        name_zh_hans: form.name,
         phone: form.phone || null,
-        address_zh_hant: form.address_zh_hant || null,
-        address_zh_hans: form.address_zh_hans || null,
-        occupation_zh_hant: form.occupation_zh_hant || null,
-        occupation_zh_hans: form.occupation_zh_hans || null,
+        address_zh_hant: form.address || null,
+        address_zh_hans: form.address || null,
+        occupation_zh_hant: form.occupation || null,
+        occupation_zh_hans: form.occupation || null,
         birthday: form.birthday || null,
-        notes_zh_hant: form.notes_zh_hant || null,
-        notes_zh_hans: form.notes_zh_hans || null,
+        notes_zh_hant: form.notes || null,
+        notes_zh_hans: form.notes || null,
         type: form.type,
         status: form.status || null,
         hierarchy_id: form.hierarchy_id,
@@ -201,17 +187,10 @@ export function MemberFormDialog({
       loading={loading}
     >
       <InputField
-        label="姓名（繁體）"
-        value={form.name_zh_hant}
-        onChange={(e) => setForm({ ...form, name_zh_hant: e.target.value })}
-        error={errors.name_zh_hant}
-        placeholder="請輸入姓名"
-      />
-
-      <InputField
-        label="姓名（簡體）"
-        value={form.name_zh_hans}
-        onChange={(e) => setForm({ ...form, name_zh_hans: e.target.value })}
+        label="姓名"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        error={errors.name}
         placeholder="請輸入姓名"
       />
 
@@ -249,15 +228,15 @@ export function MemberFormDialog({
 
       <InputField
         label="地址"
-        value={form.address_zh_hant}
-        onChange={(e) => setForm({ ...form, address_zh_hant: e.target.value })}
+        value={form.address}
+        onChange={(e) => setForm({ ...form, address: e.target.value })}
         placeholder="請輸入地址"
       />
 
       <InputField
         label="職業"
-        value={form.occupation_zh_hant}
-        onChange={(e) => setForm({ ...form, occupation_zh_hant: e.target.value })}
+        value={form.occupation}
+        onChange={(e) => setForm({ ...form, occupation: e.target.value })}
         placeholder="請輸入職業"
       />
 
@@ -271,8 +250,8 @@ export function MemberFormDialog({
 
       <TextareaField
         label="備註"
-        value={form.notes_zh_hant}
-        onChange={(e) => setForm({ ...form, notes_zh_hant: e.target.value })}
+        value={form.notes}
+        onChange={(e) => setForm({ ...form, notes: e.target.value })}
         placeholder="請輸入備註"
       />
     </FormDialog>

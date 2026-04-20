@@ -358,7 +358,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         </Tabs>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-50 px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40 px-4 py-3">
         <div className="flex gap-3 max-w-md mx-auto">
           <Button
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
