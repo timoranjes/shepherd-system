@@ -16,70 +16,68 @@ export default function LoginPage() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setMessage(null)
 
     const { createClient } = await import("@/lib/supabase")
     const supabase = createClient()
 
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+
     const timeoutId = setTimeout(() => {
+      console.error("Request timeout after 30 seconds")
       setError("請求超時，請稍後再試")
       setLoading(false)
     }, 30000)
 
     try {
       if (isSignUp) {
+        console.log("Attempting sign up for:", email)
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
         })
+        console.log("Sign up response:", data, error)
         clearTimeout(timeoutId)
+
         if (error) {
-          if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("duplicate")) {
-            setError("此電子郵件已被註冊，請直接登入或使用 Google 登入")
-          } else {
-            throw error
-          }
+          console.error("Sign up error:", error)
+          setError(error.message)
+          setLoading(false)
           return
         }
+
         if (data.user && !data.session) {
-          const { data: existingUser } = await supabase.auth.getUser()
-          if (existingUser.user) {
-            setError("此電子郵件已被註冊，請直接登入或使用 Google 登入")
-            return
-          }
           setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
+          setLoading(false)
         } else if (data.session) {
+          console.log("Sign up successful with session, redirecting...")
           window.location.href = "/"
         }
       } else {
+        console.log("Attempting sign in for:", email)
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
+        console.log("Sign in response:", data, error)
         clearTimeout(timeoutId)
+
         if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            setError("電子郵件或密碼錯誤，請重新輸入")
-          } else if (error.message.includes("Email not confirmed")) {
-            setError("請先確認您的電子郵件才能登入")
-          } else if (error.message.includes("No user")) {
-            setError("此電子郵件尚未註冊，請先註冊")
-          } else {
-            throw error
-          }
+          console.error("Sign in error:", error)
+          setError(error.message)
+          setLoading(false)
           return
         }
-        console.log("Login successful:", data.user?.email)
+
+        console.log("Sign in successful, redirecting...")
         window.location.href = "/"
       }
     } catch (err) {
       clearTimeout(timeoutId)
-      console.error("Auth error:", err)
+      console.error("Unexpected auth error:", err)
       setError(err instanceof Error ? err.message : "發生錯誤")
-    } finally {
-      if (loading) clearTimeout(timeoutId)
+      setLoading(false)
     }
   }
 
