@@ -187,6 +187,8 @@ export default function HomePage() {
     return name.charAt(0)
   }
 
+  const pathname = usePathname()
+
   const navItems = [
     { id: "home", icon: Home, label: t.home, href: "/" },
     { id: "targets", icon: Users, label: t.targets, href: "/targets" },
