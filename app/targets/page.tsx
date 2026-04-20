@@ -201,6 +201,7 @@ export default function TargetsPage() {
             />
           </div>
           <Button
+            type="button"
             className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1 shrink-0"
             onClick={() => setMemberDialogOpen(true)}
           >

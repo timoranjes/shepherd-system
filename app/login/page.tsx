@@ -23,26 +23,36 @@ export default function LoginPage() {
     const { createClient } = await import("@/lib/supabase")
     const supabase = createClient()
 
+    const timeoutId = setTimeout(() => {
+      setError("請求超時，請稍後再試")
+      setLoading(false)
+    }, 30000)
+
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
         })
+        clearTimeout(timeoutId)
         if (error) throw error
         setMessage("註冊成功！請查看郵箱確認郵件。")
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
+        clearTimeout(timeoutId)
         if (error) throw error
+        console.log("Login successful:", data.user?.email)
         window.location.href = "/"
       }
     } catch (err) {
+      clearTimeout(timeoutId)
+      console.error("Auth error:", err)
       setError(err instanceof Error ? err.message : "發生錯誤")
     } finally {
-      setLoading(false)
+      if (loading) clearTimeout(timeoutId)
     }
   }
 
