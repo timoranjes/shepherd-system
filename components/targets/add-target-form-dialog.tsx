@@ -3,10 +3,17 @@
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { FormDialog } from "@/components/ui/form-dialog"
-import { InputField } from "@/components/ui/form-field"
-import { TextareaField } from "@/components/ui/form-field"
-import { SelectField } from "@/components/ui/select-field"
 import {
   careTargetSchema,
   type CareTargetFormValues,
@@ -17,6 +24,7 @@ import {
   ageGroupOptions,
 } from "@/lib/schemas/target"
 import { createCareTarget } from "@/actions/target"
+import { cn } from "@/lib/utils"
 
 interface AddTargetFormDialogProps {
   open: boolean
@@ -42,27 +50,28 @@ export function AddTargetFormDialog({
     resolver: zodResolver(careTargetSchema),
     defaultValues: {
       name: "",
-      gender: undefined,
-      age_group: undefined,
+      gender: "" as "男" | "女",
+      age_group: "" as "青少年" | "大專" | "青職" | "壯年" | "年長",
       phone: "",
-      category: undefined,
+      category: "" as "gospel_friend" | "little_sheep",
       status: "",
       structure_id: hierarchyId || "",
       notes: "",
     },
+    mode: "onChange",
   })
 
-  const { reset, watch, setValue } = form
+  const { reset, watch } = form
   const watchCategory = watch("category")
 
   useEffect(() => {
     if (open) {
       reset({
         name: "",
-        gender: undefined,
-        age_group: undefined,
+        gender: "" as "男" | "女",
+        age_group: "" as "青少年" | "大專" | "青職" | "壯年" | "年長",
         phone: "",
-        category: undefined,
+        category: "" as "gospel_friend" | "little_sheep",
         status: "",
         structure_id: hierarchyId || "",
         notes: "",
@@ -72,11 +81,11 @@ export function AddTargetFormDialog({
 
   useEffect(() => {
     if (watchCategory) {
-      setValue("status", "")
+      form.setValue("status", "")
     }
-  }, [watchCategory, setValue])
+  }, [watchCategory, form])
 
-  const category = form.watch("category")
+  const category = watch("category")
   const statusOptions =
     category === "gospel_friend"
       ? gospelFriendStatusOptions
@@ -89,8 +98,6 @@ export function AddTargetFormDialog({
     if (!isValid) return
 
     const values = form.getValues()
-    setValue("status", values.status)
-
     const result = await createCareTarget(values)
 
     if (result.success) {
@@ -113,95 +120,229 @@ export function AddTargetFormDialog({
       submitLabel="新增"
       loading={isSubmitting}
     >
-      <div className="space-y-4">
-        <div className="rounded-lg bg-muted/50 p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            基本資料
-          </p>
-          <InputField
-            label="姓名"
-            placeholder="請輸入姓名"
-            {...form.register("name")}
-            error={errors.name?.message}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <SelectField
-              label="性別"
-              value={form.watch("gender") || ""}
-              onValueChange={(v) => form.setValue("gender", v as "男" | "女")}
-              options={[...genderOptions]}
-              placeholder="選擇性別"
-              error={errors.gender?.message}
+      <Form {...form}>
+        <div className="space-y-4">
+          <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              基本資料
+            </p>
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>姓名</FormLabel>
+                  <FormControl>
+                    <Input placeholder="請輸入姓名" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            <SelectField
-              label="年齡段"
-              value={form.watch("age_group") || ""}
-              onValueChange={(v) =>
-                form.setValue("age_group", v as "青少年" | "大專" | "青職" | "壯年" | "年長")
-              }
-              options={[...ageGroupOptions]}
-              placeholder="選擇年齡"
-              error={errors.age_group?.message}
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>性別</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="選擇性別" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {genderOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="age_group"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>年齡段</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="選擇年齡" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ageGroupOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>聯絡電話</FormLabel>
+                  <FormControl>
+                    <Input placeholder="選填" type="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <InputField
-            label="聯絡電話"
-            placeholder="選填"
-            type="tel"
-            {...form.register("phone")}
-            error={errors.phone?.message}
-          />
-        </div>
 
-        <div className="rounded-lg bg-muted/50 p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            靈程與類別
-          </p>
-          <SelectField
-            label="照顧類別"
-            value={form.watch("category") || ""}
-            onValueChange={(v) => {
-              form.setValue("category", v as "gospel_friend" | "little_sheep")
-              form.setValue("status", "")
-            }}
-            options={[...categoryOptions]}
-            placeholder="選擇類別"
-            error={errors.category?.message}
-          />
-          <SelectField
-            label="當前狀態"
-            value={form.watch("status") || ""}
-            onValueChange={(v) => form.setValue("status", v)}
-            options={[...statusOptions]}
-            placeholder={category ? "選擇狀態" : "請先選擇類別"}
-            error={errors.status?.message}
-          />
-          <p className="text-xs text-muted-foreground">
-            {category === "gospel_friend" && "福音朋友：初接觸 → 平安之子 → 柔軟敞開 → 有尋求"}
-            {category === "little_sheep" && "初信小羊：剛受浸 → 晨興建立中 → 穩定家聚會 → 穩定主日"}
-          </p>
-        </div>
+          <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              靈程與類別
+            </p>
 
-        <div className="rounded-lg bg-muted/50 p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            組織架構與備註
-          </p>
-          <SelectField
-            label="所屬小排/分區"
-            value={form.watch("structure_id") || ""}
-            onValueChange={(v) => form.setValue("structure_id", v)}
-            options={mockStructureOptions}
-            placeholder="選擇小排"
-            error={errors.structure_id?.message}
-          />
-          <TextareaField
-            label="背景備註與代禱事項"
-            placeholder="請填寫對方的背景、目前靈程傾向或代禱需求..."
-            {...form.register("notes")}
-            error={errors.notes?.message}
-          />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>照顧類別</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={(v) => {
+                        field.onChange(v)
+                        form.setValue("status", "")
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="選擇類別" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>當前狀態</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!category}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            category ? "選擇狀態" : "請先選擇類別"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <p className="text-xs text-muted-foreground">
+              {category === "gospel_friend" &&
+                "福音朋友：初接觸 → 平安之子 → 柔軟敞開 → 有尋求"}
+              {category === "little_sheep" &&
+                "初信小羊：剛受浸 → 晨興建立中 → 穩定家聚會 → 穩定主日"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              組織架構與備註
+            </p>
+
+            <FormField
+              control={form.control}
+              name="structure_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>所屬小排/分區</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="選擇小排" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockStructureOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>背景備註與代禱事項</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="請填寫對方的背景、目前靈程傾向或代禱需求..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
-      </div>
+      </Form>
     </FormDialog>
   )
 }
