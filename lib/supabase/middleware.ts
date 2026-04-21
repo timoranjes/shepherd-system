@@ -23,10 +23,16 @@ export async function updateSession(request: NextRequest) {
 
   let user = null
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Auth timeout')), 5000)
+    )
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      timeout,
+    ])
+    user = result.data.user
   } catch {
-    // Auth check failed — treat as unauthenticated
+    // Auth check failed or timed out — treat as unauthenticated
   }
 
   const pathname = new URL(request.url).pathname
