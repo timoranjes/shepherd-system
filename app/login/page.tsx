@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sun } from "lucide-react"
-import { signInWithEmail, signUp } from "@/lib/auth"
+import { createClient } from "@/lib/supabase"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -23,29 +23,26 @@ export default function LoginPage() {
     setMessage(null)
 
     try {
+      const supabase = createClient()
+      
       if (isSignUp) {
         console.log("Attempting sign up for:", email)
-        const data = await signUp(email, password)
+        const { data, error } = await supabase.auth.signUp({ email, password })
         console.log("Sign up response:", data)
 
-        if (data.confirmation_sent_at) {
-          setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
+        if (error) throw error
+
+        if (data.user?.identities?.length === 0) {
+          setMessage("此郵箱已註冊，請直接登入。")
         } else {
-          window.location.href = "/"
+          setMessage("註冊成功！請查看郵箱確認郵件以完成激活。")
         }
       } else {
         console.log("Attempting sign in for:", email)
-        const data = await signInWithEmail(email, password)
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         console.log("Sign in response:", data)
 
-        await fetch('/api/auth/callback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-          }),
-        })
+        if (error) throw error
 
         const supabase = createClient()
         await supabase.auth.setSession({

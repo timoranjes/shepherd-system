@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS members (
     notes_zh_hans TEXT,
     avatar_url TEXT,
     type TEXT NOT NULL CHECK (type IN ('gospel', 'new_believer')),
-    status TEXT,
+    status TEXT CHECK (status IN ('初接觸', '初接触', '平安之子', '柔軟敞開', '柔软敞开', '有尋求', '有寻求', '剛受浸', '刚受浸', '晨興建立中', '晨兴建立中', '穩定家聚會', '稳定家聚会')),
     hierarchy_id UUID NOT NULL REFERENCES hierarchies(id) ON DELETE RESTRICT,
     assigned_to UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS pastoring_logs (
     summary_zh_hant TEXT NOT NULL,
     summary_zh_hans TEXT NOT NULL,
     partner_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
@@ -85,7 +86,8 @@ CREATE TABLE IF NOT EXISTS materials (
     cover_color TEXT,
     file_url TEXT,
     uploaded_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
@@ -102,7 +104,8 @@ CREATE TABLE IF NOT EXISTS prayers (
     hierarchy_id UUID NOT NULL REFERENCES hierarchies(id) ON DELETE RESTRICT,
     posted_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     amen_count INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
@@ -160,6 +163,15 @@ CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON profiles
 CREATE TRIGGER members_updated_at BEFORE UPDATE ON members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER pastoring_logs_updated_at BEFORE UPDATE ON pastoring_logs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER materials_updated_at BEFORE UPDATE ON materials
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER prayers_updated_at BEFORE UPDATE ON prayers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- ============================================================
 -- Trigger to increment amen_count
 -- ============================================================
@@ -174,6 +186,21 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER amen_action_increment
     AFTER INSERT ON amen_actions
     FOR EACH ROW EXECUTE FUNCTION increment_amen_count();
+
+-- ============================================================
+-- Trigger to decrement amen_count on delete
+-- ============================================================
+CREATE OR REPLACE FUNCTION decrement_amen_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE prayers SET amen_count = GREATEST(amen_count - 1, 0) WHERE id = OLD.prayer_id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER amen_action_decrement
+    AFTER DELETE ON amen_actions
+    FOR EACH ROW EXECUTE FUNCTION decrement_amen_count();
 
 -- ============================================================
 -- Function to get all child hierarchy IDs recursively
@@ -210,3 +237,25 @@ BEGIN
     SELECT id FROM hierarchy_tree;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- Auto-create activity when pastoring log is inserted
+-- ============================================================
+CREATE OR REPLACE FUNCTION create_activity_from_pastoring_log()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO activities (member_id, user_id, type, description_zh_hant, description_zh_hans)
+    VALUES (
+        NEW.member_id,
+        NEW.user_id,
+        NEW.type,
+        NEW.summary_zh_hant,
+        NEW.summary_zh_hans
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER pastoring_log_creates_activity
+    AFTER INSERT ON pastoring_logs
+    FOR EACH ROW EXECUTE FUNCTION create_activity_from_pastoring_log();

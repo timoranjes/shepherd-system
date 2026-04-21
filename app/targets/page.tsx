@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useMembers } from "@/hooks/use-members"
 import { useHierarchies, useUserHierarchyIds } from "@/hooks/use-hierarchies"
+import { useUser } from "@/hooks/use-user"
 import { MemberFormDialog } from "@/components/members/member-form-dialog"
 import { TransferDialog } from "@/components/members/transfer-dialog"
 import type { Member } from "@/types/database"
@@ -116,7 +117,8 @@ export default function TargetsPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
 
   const pathname = usePathname()
-  const { ids: hierarchyIds } = useUserHierarchyIds(undefined)
+  const { profile } = useUser()
+  const { ids: hierarchyIds, loading: hierarchyLoading } = useUserHierarchyIds(profile?.id)
   const { members, loading } = useMembers(hierarchyIds)
   const { hierarchies, getHierarchyTree } = useHierarchies()
 
@@ -281,7 +283,7 @@ export default function TargetsPage() {
           {t.swipeHint}
         </p>
 
-        {loading ? (
+        {loading || hierarchyLoading ? (
           <p className="text-center text-muted-foreground py-8">{t.loading}</p>
         ) : filteredMembers.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
@@ -329,7 +331,7 @@ export default function TargetsPage() {
                                 {lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
                               </h3>
                               <p className="text-sm text-muted-foreground mt-0.5">
-                                {t.lastCare}：{formatLastCare(undefined, lang)}
+                                {t.lastCare}：{formatLastCare(member.updated_at || member.created_at, lang)}
                               </p>
                               {member.assigned_to_profile && (
                                 <p className="text-sm text-muted-foreground">

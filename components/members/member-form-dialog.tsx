@@ -5,6 +5,7 @@ import { FormDialog } from "@/components/ui/form-dialog"
 import { InputField, TextareaField } from "@/components/ui/form-field"
 import { SelectField } from "@/components/ui/select-field"
 import { createClient } from "@/lib/supabase"
+import { toast } from "sonner"
 import type { Member, Hierarchy } from "@/types/database"
 
 interface MemberFormDialogProps {
@@ -146,24 +147,29 @@ export function MemberFormDialog({
       }
 
       if (isEdit && member) {
-        await supabase
+        const { error } = await supabase
           .from("members")
           .update(payload)
           .eq("id", member.id)
+        if (error) throw error
+        toast.success("已更新")
       } else {
-        await supabase
+        const { error } = await supabase
           .from("members")
           .insert({
             ...payload,
             created_by: user?.id,
             assigned_to: user?.id,
           })
+        if (error) throw error
+        toast.success("已新增")
       }
 
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
       console.error("Failed to save member:", error)
+      toast.error(error instanceof Error ? error.message : "儲存失敗")
     } finally {
       setLoading(false)
     }
