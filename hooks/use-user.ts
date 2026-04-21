@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/database"
@@ -10,8 +10,19 @@ export function useUser() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  // Track whether the initial auth check has completed.
+  // Prevents showing the loading screen again on token refresh / remount.
+  const initialCheckDone = useRef(false)
 
   useEffect(() => {
+    // If we already completed the initial check in a prior render cycle,
+    // skip the full-screen loading state. Subsequent auth state changes
+    // (token refresh, etc.) should update user/profile silently.
+    if (initialCheckDone.current) {
+      setLoading(false)
+      return
+    }
+
     const supabase = createClient()
     let cancelled = false
 
@@ -41,7 +52,10 @@ export function useUser() {
         console.error("Auth getUser failed:", err)
         setUser(null)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          initialCheckDone.current = true
+          setLoading(false)
+        }
       }
     }
 
@@ -61,7 +75,13 @@ export function useUser() {
         } else {
           setProfile(null)
         }
-        setLoading(false)
+        // Only update loading during the initial check window.
+        // After that, auth events (TOKEN_REFRESHED, SIGNED_IN, etc.)
+        // update user/profile without triggering the loading screen.
+        if (!initialCheckDone.current) {
+          initialCheckDone.current = true
+          setLoading(false)
+        }
       }
     )
 
