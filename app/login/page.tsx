@@ -47,6 +47,12 @@ export default function LoginPage() {
           }),
         })
 
+        const supabase = createClient()
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        })
+
         console.log("Sign in successful, redirecting...")
         window.location.href = "/"
       }
