@@ -14,6 +14,7 @@ import {
   Plus,
   Heart,
   Trash2,
+  Users,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useMember, usePastoringLogs } from "@/hooks/use-members"
 import { useUser } from "@/hooks/use-user"
 import { MemberFormDialog } from "@/components/members/member-form-dialog"
-import { PastoringLogFormDialog } from "@/components/pastoring-logs/pastoring-log-form-dialog"
+import { AddPastoringLogDrawer } from "@/components/pastoring-logs/add-pastoring-log-drawer"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
@@ -79,15 +80,23 @@ const translations = {
 const logTypes = {
   gospel: { icon: Megaphone, color: "text-orange-500", bg: "bg-orange-100" },
   home_gathering: { icon: Home, color: "text-blue-500", bg: "bg-blue-100" },
+  home_meeting: { icon: Home, color: "text-blue-500", bg: "bg-blue-100" },
   morning_revival: { icon: Sun, color: "text-amber-500", bg: "bg-amber-100" },
   bible_reading: { icon: BookOpen, color: "text-emerald-500", bg: "bg-emerald-100" },
+  reading_together: { icon: BookOpen, color: "text-emerald-500", bg: "bg-emerald-100" },
+  visitation: { icon: Users, color: "text-teal-500", bg: "bg-teal-100" },
+  love_feast: { icon: Heart, color: "text-pink-500", bg: "bg-pink-100" },
 }
 
 const logTypeLabels = {
   gospel: { "zh-Hant": "福音接觸", "zh-Hans": "福音接触" },
   home_gathering: { "zh-Hant": "家聚會", "zh-Hans": "家聚会" },
+  home_meeting: { "zh-Hant": "家聚會", "zh-Hans": "家聚会" },
   morning_revival: { "zh-Hant": "晨興", "zh-Hans": "晨兴" },
   bible_reading: { "zh-Hant": "讀經", "zh-Hans": "读经" },
+  reading_together: { "zh-Hant": "陪讀", "zh-Hans": "陪读" },
+  visitation: { "zh-Hant": "探訪", "zh-Hans": "探访" },
+  love_feast: { "zh-Hant": "愛筵", "zh-Hans": "爱筵" },
 }
 
 const statusColors: Record<string, string> = {
@@ -121,7 +130,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [activeTab, setActiveTab] = useState("logs")
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
-  const [logDialogOpen, setLogDialogOpen] = useState(false)
+  const [logDrawerOpen, setLogDrawerOpen] = useState(false)
   const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
 
   const { member, loading: memberLoading } = useMember(params.id)
@@ -402,7 +411,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         <div className="flex gap-3 max-w-md mx-auto">
           <Button
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
-            onClick={() => setLogDialogOpen(true)}
+            onClick={() => setLogDrawerOpen(true)}
           >
             <Plus className="w-4 h-4" />
             {t.addLog}
@@ -425,10 +434,12 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         member={member}
       />
 
-      <PastoringLogFormDialog
-        open={logDialogOpen}
-        onOpenChange={setLogDialogOpen}
+      <AddPastoringLogDrawer
+        open={logDrawerOpen}
+        onOpenChange={setLogDrawerOpen}
         memberId={params.id}
+        targetName={lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
+        lang={lang}
       />
 
       <PrayerFormDialog
