@@ -44,11 +44,12 @@ export default function LoginPage() {
 
         if (error) throw error
 
-        const supabase = createClient()
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        })
+        if (data.session) {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          })
+        }
 
         console.log("Sign in successful, redirecting...")
         window.location.href = "/"

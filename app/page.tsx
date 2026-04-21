@@ -101,7 +101,7 @@ export default function HomePage() {
   const { ids: hierarchyIds } = useUserHierarchyIds(profile?.id)
   const { activities, loading: activitiesLoading } = useActivities(hierarchyIds, 5)
   const { prayers, loading: prayersLoading } = usePrayers(hierarchyIds)
-  const { prayedIds, toggleAmen } = useAmenActions(user?.id)
+  const { prayedIds, toggleAmen } = useAmenActions(user?.id ?? "")
   const t = translations[lang]
 
   useEffect(() => {
