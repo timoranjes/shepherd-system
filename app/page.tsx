@@ -25,7 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/hooks/use-user"
 import { useActivities } from "@/hooks/use-activities"
-import { usePrayers } from "@/hooks/use-prayers"
+import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
 import { useUserHierarchyIds } from "@/hooks/use-hierarchies"
 import type { Activity, Prayer, Member } from "@/types/database"
 
@@ -94,8 +94,6 @@ function formatTimeAgo(dateString: string, lang: Language): string {
 export default function HomePage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [selectedHierarchy, setSelectedHierarchy] = useState<{ id: string; name: Record<Language, string> } | null>(null)
-  const [amenCounts, setAmenCounts] = useState<Record<string, number>>({})
-  const [hasAmen, setHasAmen] = useState<Record<string, boolean>>({})
   const [gospelCount, setGospelCount] = useState(0)
   const [newBelieverCount, setNewBelieverCount] = useState(0)
 
@@ -103,6 +101,7 @@ export default function HomePage() {
   const { ids: hierarchyIds } = useUserHierarchyIds(profile?.id)
   const { activities, loading: activitiesLoading } = useActivities(hierarchyIds, 5)
   const { prayers, loading: prayersLoading } = usePrayers(hierarchyIds)
+  const { prayedIds, toggleAmen } = useAmenActions(user?.id)
   const t = translations[lang]
 
   useEffect(() => {
@@ -135,53 +134,6 @@ export default function HomePage() {
 
     fetchStats()
   }, [hierarchyIds])
-
-  useEffect(() => {
-    const fetchAmenStatus = async () => {
-      if (!user || prayers.length === 0) return
-
-      const { createClient } = await import("@/lib/supabase")
-      const supabase = createClient()
-
-      const { data } = await supabase
-        .from("amen_actions")
-        .select("prayer_id")
-        .eq("user_id", user.id)
-
-      if (data) {
-        const amenRecord: Record<string, boolean> = {}
-        data.forEach((a) => { amenRecord[a.prayer_id] = true })
-        setHasAmen(amenRecord)
-      }
-    }
-
-    fetchAmenStatus()
-  }, [user, prayers])
-
-  const handleAmen = async (prayerId: string) => {
-    if (!user) return
-
-    const { createClient } = await import("@/lib/supabase")
-    const supabase = createClient()
-
-    if (hasAmen[prayerId]) {
-      await supabase
-        .from("amen_actions")
-        .delete()
-        .eq("prayer_id", prayerId)
-        .eq("user_id", user.id)
-
-      setAmenCounts((prev) => ({ ...prev, [prayerId]: (prev[prayerId] || 0) - 1 }))
-      setHasAmen((prev) => ({ ...prev, [prayerId]: false }))
-    } else {
-      await supabase
-        .from("amen_actions")
-        .insert({ prayer_id: prayerId, user_id: user.id })
-
-      setAmenCounts((prev) => ({ ...prev, [prayerId]: (prev[prayerId] || 0) + 1 }))
-      setHasAmen((prev) => ({ ...prev, [prayerId]: true }))
-    }
-  }
 
   const getInitials = (name: string) => {
     return name.charAt(0)
@@ -358,19 +310,19 @@ export default function HomePage() {
                 </p>
                 <div className="flex justify-end">
                   <Button
-                    variant={hasAmen[focusPrayer.id] ? "default" : "outline"}
+                    variant={prayedIds.has(focusPrayer.id) ? "default" : "outline"}
                     size="sm"
-                    onClick={() => handleAmen(focusPrayer.id)}
+                    onClick={() => toggleAmen(focusPrayer.id)}
                     className={`gap-2 ${
-                      hasAmen[focusPrayer.id]
+                      prayedIds.has(focusPrayer.id)
                         ? "bg-primary text-primary-foreground"
                         : "hover:bg-primary/10 hover:text-primary"
                     }`}
                   >
                     <Heart
-                      className={`w-4 h-4 ${hasAmen[focusPrayer.id] ? "fill-current" : ""}`}
+                      className={`w-4 h-4 ${prayedIds.has(focusPrayer.id) ? "fill-current" : ""}`}
                     />
-                    {t.amen} ({(focusPrayer.amen_count || 0) + (amenCounts[focusPrayer.id] || 0)})
+                    {t.amen} ({focusPrayer.amen_count || 0})
                   </Button>
                 </div>
               </CardContent>

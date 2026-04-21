@@ -49,7 +49,7 @@ export function useUserHierarchyIds(profileId?: string) {
     const fetchIds = async () => {
       if (!profileId) {
         setIds([])
-        setLoading(false)
+        setLoading(true)
         return
       }
 

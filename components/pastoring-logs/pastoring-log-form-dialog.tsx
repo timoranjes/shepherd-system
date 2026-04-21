@@ -5,6 +5,7 @@ import { FormDialog } from "@/components/ui/form-dialog"
 import { SelectField } from "@/components/ui/select-field"
 import { TextareaField } from "@/components/ui/form-field"
 import { createClient } from "@/lib/supabase"
+import { toast } from "sonner"
 
 interface PastoringLogFormDialogProps {
   open: boolean
@@ -42,19 +43,22 @@ export function PastoringLogFormDialog({
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      await supabase.from("pastoring_logs").insert({
+      const { error } = await supabase.from("pastoring_logs").insert({
         member_id: memberId,
         user_id: user?.id,
         type: form.type as "gospel" | "home_gathering" | "morning_revival" | "bible_reading",
         summary_zh_hant: form.summary_zh_hant,
         summary_zh_hans: form.summary_zh_hans || form.summary_zh_hant,
       })
+      if (error) throw error
 
       setForm({ type: "gospel", summary_zh_hant: "", summary_zh_hans: "" })
       onOpenChange(false)
       onSuccess?.()
+      toast.success("已新增")
     } catch (error) {
       console.error("Failed to add pastoring log:", error)
+      toast.error(error instanceof Error ? error.message : "儲存失敗")
     } finally {
       setLoading(false)
     }

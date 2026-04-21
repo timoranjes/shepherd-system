@@ -13,6 +13,7 @@ import {
   BookOpen,
   Plus,
   Heart,
+  Trash2,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,8 @@ import { useUser } from "@/hooks/use-user"
 import { MemberFormDialog } from "@/components/members/member-form-dialog"
 import { PastoringLogFormDialog } from "@/components/pastoring-logs/pastoring-log-form-dialog"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
+import { createClient } from "@/lib/supabase"
+import { toast } from "sonner"
 import type { PastoringLog } from "@/types/database"
 
 type Language = "zh-Hant" | "zh-Hans"
@@ -140,6 +143,29 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
     }
   }
 
+  const handleDeleteMember = async () => {
+    if (!confirm(lang === "zh-Hant" ? "確定要刪除此對象嗎？此操作無法復原。" : "确定要删除此对象吗？此操作无法还原。")) return
+    const supabase = createClient()
+    const { error } = await supabase.from("members").delete().eq("id", params.id)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    toast.success("已刪除")
+    window.location.href = "/targets"
+  }
+
+  const handleDeleteLog = async (logId: string) => {
+    if (!confirm(lang === "zh-Hant" ? "確定要刪除此牧養紀錄嗎？" : "确定要删除此牧养记录吗？")) return
+    const supabase = createClient()
+    const { error } = await supabase.from("pastoring_logs").delete().eq("id", logId)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    toast.success("已刪除")
+  }
+
   if (memberLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -231,6 +257,15 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
               </div>
               <span className="text-xs text-muted-foreground">{t.edit}</span>
             </button>
+            <button
+              className="flex flex-col items-center gap-1.5 group"
+              onClick={handleDeleteMember}
+            >
+              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              <span className="text-xs text-destructive">{lang === "zh-Hant" ? "刪除" : "删除"}</span>
+            </button>
           </div>
         </section>
 
@@ -319,8 +354,13 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                           <div className="w-0.5 flex-1 bg-border min-h-[24px]" />
                         )}
                       </div>
-
-                      <div className="flex-1 pb-6">
+                      <div className="flex-1 pb-6 relative group">
+                        <button
+                          onClick={() => handleDeleteLog(log.id)}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </button>
                         <Card className="bg-card border-border shadow-sm">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">

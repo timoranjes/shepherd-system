@@ -38,47 +38,81 @@ CREATE POLICY "Authenticated users can view hierarchies"
 
 -- ============================================================
 -- Members Policies
--- Note: For simplicity, allow all authenticated users to read members.
--- For hierarchy-based filtering, use the get_user_hierarchy_ids function
--- in application code or enable the policies below after testing.
+-- Hierarchy-based filtering: users can only see members in their hierarchy scope
 -- ============================================================
 
-CREATE POLICY "Members are viewable by authenticated users"
+CREATE POLICY "Members viewable by hierarchy scope"
     ON members FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        hierarchy_id IN (
+            SELECT id FROM get_user_hierarchy_ids(auth.uid())
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can insert members"
+CREATE POLICY "Users can insert members in their hierarchy"
     ON members FOR INSERT
     TO authenticated
-    WITH CHECK (true);
+    WITH CHECK (
+        hierarchy_id IN (
+            SELECT id FROM get_user_hierarchy_ids(auth.uid())
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can update members"
+CREATE POLICY "Users can update members in their hierarchy"
     ON members FOR UPDATE
     TO authenticated
-    USING (true);
+    USING (
+        hierarchy_id IN (
+            SELECT id FROM get_user_hierarchy_ids(auth.uid())
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can delete own members"
+CREATE POLICY "Users can delete members they created"
     ON members FOR DELETE
     TO authenticated
-    USING (created_by = auth.uid());
+    USING (
+        created_by = auth.uid()
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
 -- ============================================================
 -- Pastoring Logs Policies
+-- Filtered by member's hierarchy scope
 -- ============================================================
 
-CREATE POLICY "Pastoring logs are viewable by authenticated users"
+CREATE POLICY "Pastoring logs viewable by hierarchy scope"
     ON pastoring_logs FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        member_id IN (
+            SELECT m.id FROM members m
+            WHERE m.hierarchy_id IN (
+                SELECT id FROM get_user_hierarchy_ids(auth.uid())
+            )
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can insert pastoring logs"
+CREATE POLICY "Users can insert pastoring logs for their members"
     ON pastoring_logs FOR INSERT
     TO authenticated
-    WITH CHECK (true);
+    WITH CHECK (
+        member_id IN (
+            SELECT m.id FROM members m
+            WHERE m.hierarchy_id IN (
+                SELECT id FROM get_user_hierarchy_ids(auth.uid())
+            )
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
 -- ============================================================
 -- Materials Policies
+-- All authenticated users can view (shared resources)
 -- ============================================================
 
 CREATE POLICY "All authenticated users can view materials"
@@ -103,17 +137,28 @@ CREATE POLICY "Users can delete own materials"
 
 -- ============================================================
 -- Prayers Policies
+-- Filtered by hierarchy scope
 -- ============================================================
 
-CREATE POLICY "Prayers are viewable by authenticated users"
+CREATE POLICY "Prayers viewable by hierarchy scope"
     ON prayers FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        hierarchy_id IN (
+            SELECT id FROM get_user_hierarchy_ids(auth.uid())
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can create prayers"
+CREATE POLICY "Users can create prayers in their hierarchy"
     ON prayers FOR INSERT
     TO authenticated
-    WITH CHECK (true);
+    WITH CHECK (
+        hierarchy_id IN (
+            SELECT id FROM get_user_hierarchy_ids(auth.uid())
+        )
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
 CREATE POLICY "Users can update own prayers"
     ON prayers FOR UPDATE
@@ -129,15 +174,23 @@ CREATE POLICY "Users can delete own prayers"
 -- Amen Actions Policies
 -- ============================================================
 
-CREATE POLICY "Users can view own amen actions"
+CREATE POLICY "Users can view amen actions on prayers they can see"
     ON amen_actions FOR SELECT
     TO authenticated
-    USING (user_id = auth.uid());
+    USING (
+        prayer_id IN (
+            SELECT p.id FROM prayers p
+            WHERE p.hierarchy_id IN (
+                SELECT id FROM get_user_hierarchy_ids(auth.uid())
+            )
+            OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+        )
+    );
 
 CREATE POLICY "Users can add amen"
     ON amen_actions FOR INSERT
     TO authenticated
-    WITH CHECK (true);
+    WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can delete own amen"
     ON amen_actions FOR DELETE
@@ -146,14 +199,24 @@ CREATE POLICY "Users can delete own amen"
 
 -- ============================================================
 -- Activities Policies
+-- Filtered by member's hierarchy scope
 -- ============================================================
 
-CREATE POLICY "Activities are viewable by authenticated users"
+CREATE POLICY "Activities viewable by hierarchy scope"
     ON activities FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        member_id IN (
+            SELECT m.id FROM members m
+            WHERE m.hierarchy_id IN (
+                SELECT id FROM get_user_hierarchy_ids(auth.uid())
+            )
+        )
+        OR member_id IS NULL
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+    );
 
-CREATE POLICY "Users can create activities"
+CREATE POLICY "System can create activities"
     ON activities FOR INSERT
     TO authenticated
     WITH CHECK (user_id = auth.uid());
@@ -164,13 +227,15 @@ CREATE POLICY "Users can create activities"
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO profiles (id, name, email, avatar_url)
+    INSERT INTO public.profiles (id, name, email, avatar_url, role)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
         NEW.email,
-        NEW.raw_user_meta_data->>'avatar_url'
-    );
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
+        'member'
+    )
+    ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -5,6 +5,7 @@ import { FormDialog } from "@/components/ui/form-dialog"
 import { InputField, TextareaField } from "@/components/ui/form-field"
 import { SelectField } from "@/components/ui/select-field"
 import { createClient } from "@/lib/supabase"
+import { toast } from "sonner"
 
 interface PrayerFormDialogProps {
   open: boolean
@@ -49,7 +50,7 @@ export function PrayerFormDialog({
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      await supabase.from("prayers").insert({
+      const { error } = await supabase.from("prayers").insert({
         title_zh_hant: form.title_zh_hant,
         title_zh_hans: form.title_zh_hans || form.title_zh_hant,
         content_zh_hant: form.content_zh_hant,
@@ -59,6 +60,7 @@ export function PrayerFormDialog({
         hierarchy_id: form.hierarchy_id || user?.id,
         posted_by: user?.id,
       })
+      if (error) throw error
 
       setForm({
         title_zh_hant: "",
@@ -71,8 +73,10 @@ export function PrayerFormDialog({
       })
       onOpenChange(false)
       onSuccess?.()
+      toast.success("已新增")
     } catch (error) {
       console.error("Failed to create prayer:", error)
+      toast.error(error instanceof Error ? error.message : "儲存失敗")
     } finally {
       setLoading(false)
     }
