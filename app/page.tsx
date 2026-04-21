@@ -150,6 +150,13 @@ export default function HomePage() {
 
   const isActive = (href: string) => pathname === href
 
+  // Redirect to login if auth check completes but no user found
+  useEffect(() => {
+    if (!userLoading && !user) {
+      window.location.href = "/login"
+    }
+  }, [userLoading, user])
+
   if (userLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
