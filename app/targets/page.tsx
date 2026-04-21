@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { SwipeAction } from "@/components/ui/swipe-action"
 import { useMembers } from "@/hooks/use-members"
 import { useHierarchies, useUserHierarchyIds } from "@/hooks/use-hierarchies"
 import { useUser } from "@/hooks/use-user"
@@ -115,6 +116,7 @@ export default function TargetsPage() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
 
   const pathname = usePathname()
   const { profile } = useUser()
@@ -291,30 +293,22 @@ export default function TargetsPage() {
           </p>
         ) : (
           <div className="space-y-3">
-            {filteredMembers.map((member, index) => (
-              <div
+            {filteredMembers.map((member) => (
+              <SwipeAction
                 key={member.id}
-                className="relative overflow-hidden rounded-xl"
+                isOpen={openSwipeId === member.id}
+                onOpenChange={(open) => {
+                  setOpenSwipeId(open ? member.id : null)
+                }}
+                onActionClick={() => {
+                  setSelectedMember(member)
+                  setTransferDialogOpen(true)
+                }}
+                actionIcon={<ArrowLeftRight className="w-5 h-5" />}
+                actionLabel={t.transfer}
               >
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-24 bg-primary flex items-center justify-center rounded-r-xl cursor-pointer"
-                  onClick={() => {
-                    setSelectedMember(member)
-                    setTransferDialogOpen(true)
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-1 text-primary-foreground">
-                    <ArrowLeftRight className="w-5 h-5" />
-                    <span className="text-xs font-medium">{t.transfer}</span>
-                  </div>
-                </div>
-
                 <Link href={`/targets/${member.id}`}>
-                  <Card
-                    className={`bg-card border-border shadow-sm relative transition-transform ${
-                      index === 0 ? "-translate-x-12" : ""
-                    }`}
-                  >
+                  <Card className="bg-card border-border shadow-sm">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <Avatar className="w-12 h-12 border-2 border-primary/20 shrink-0">
@@ -364,7 +358,7 @@ export default function TargetsPage() {
                     </CardContent>
                   </Card>
                 </Link>
-              </div>
+              </SwipeAction>
             ))}
           </div>
         )}
