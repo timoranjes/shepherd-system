@@ -13,26 +13,43 @@ export function useUser() {
 
   useEffect(() => {
     const supabase = createClient()
+    let cancelled = false
 
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        // Add 10s timeout to prevent hanging indefinitely
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Auth timeout")), 10000)
+        )
+        const result = await Promise.race([supabase.auth.getUser(), timeout])
+        const { data: { user }, error } = result
+        if (cancelled) return
+        if (error) {
+          console.error("Auth getUser error:", error.message)
+        }
+        setUser(user)
 
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single()
-        setProfile(profile)
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single()
+          if (!cancelled) setProfile(profile)
+        }
+      } catch (err) {
+        console.error("Auth getUser failed:", err)
+        setUser(null)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
 
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (cancelled) return
         setUser(session?.user ?? null)
         if (session?.user) {
           const { data: profile } = await supabase
@@ -40,7 +57,7 @@ export function useUser() {
             .select("*")
             .eq("id", session.user.id)
             .single()
-          setProfile(profile)
+          if (!cancelled) setProfile(profile)
         } else {
           setProfile(null)
         }
@@ -48,7 +65,10 @@ export function useUser() {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
