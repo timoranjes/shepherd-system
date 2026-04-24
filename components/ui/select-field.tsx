@@ -20,7 +20,7 @@ interface SelectFieldProps {
   label: string
   value: string
   onValueChange: (value: string) => void
-  options: SelectOption[]
+  options: readonly SelectOption[]
   placeholder?: string
   error?: string
   className?: string
