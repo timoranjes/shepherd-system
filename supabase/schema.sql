@@ -65,9 +65,9 @@ CREATE TABLE IF NOT EXISTS pastoring_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK (type IN ('gospel', 'home_gathering', 'morning_revival', 'bible_reading')),
-    summary_zh_hant TEXT NOT NULL,
-    summary_zh_hans TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('gospel_preaching', 'visitation', 'home_meeting', 'morning_revival', 'reading_together', 'love_feast')),
+    summary TEXT NOT NULL,
+    action_date DATE NOT NULL DEFAULT CURRENT_DATE,
     partner_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -248,9 +248,9 @@ BEGIN
     VALUES (
         NEW.member_id,
         NEW.user_id,
-        NEW.type,
-        NEW.summary_zh_hant,
-        NEW.summary_zh_hans
+        NEW.action,
+        NEW.summary,
+        NEW.summary
     );
     RETURN NEW;
 END;

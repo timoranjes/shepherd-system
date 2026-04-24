@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
   Home,
   Users,
@@ -16,11 +14,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
-import { useUserHierarchyIds } from "@/hooks/use-hierarchies"
 import { useUser } from "@/hooks/use-user"
-import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
-import type { Prayer } from "@/types/database"
+import { useHierarchies } from "@/hooks/use-hierarchies"
 
 type Language = "zh-Hant" | "zh-Hans"
 
@@ -35,11 +32,14 @@ const translations = {
     serving: "服事",
     urgent: "緊急",
     amen: "阿們",
-    home: "首頁",
-    targets: "名單",
-    materials: "資源",
-    prayers: "代禱",
+    filterByGroup: "按小排篩選",
+    allGroups: "全部小排",
+    today: "今天",
+    yesterday: "昨天",
+    daysAgo: "天前",
+    postedBy: "發起人",
     loading: "載入中...",
+    noPrayers: "暫無代禱事項",
   },
   "zh-Hans": {
     title: "代祷事项",
@@ -51,11 +51,14 @@ const translations = {
     serving: "服事",
     urgent: "紧急",
     amen: "阿们",
-    home: "首页",
-    targets: "名单",
-    materials: "资源",
-    prayers: "代祷",
+    filterByGroup: "按小排筛选",
+    allGroups: "全部小排",
+    today: "今天",
+    yesterday: "昨天",
+    daysAgo: "天前",
+    postedBy: "发起人",
     loading: "载入中...",
+    noPrayers: "暂无代祷事项",
   },
 }
 
@@ -76,61 +79,36 @@ const categoryColors: Record<string, string> = {
   urgent: "bg-red-100 text-red-700",
 }
 
-const categoryLabels: Record<string, Record<Language, string>> = {
-  gospel: { "zh-Hant": "福音朋友", "zh-Hans": "福音朋友" },
-  new_believers: { "zh-Hant": "初信小羊", "zh-Hans": "初信小羊" },
-  family: { "zh-Hant": "家庭", "zh-Hans": "家庭" },
-  serving: { "zh-Hant": "服事", "zh-Hans": "服事" },
-  urgent: { "zh-Hant": "緊急", "zh-Hans": "紧急" },
-}
-
-function formatTimeAgo(dateString: string, lang: Language): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (lang === "zh-Hant") {
-    if (diffMins < 1) return "剛剛"
-    if (diffMins < 60) return `${diffMins}分鐘前`
-    if (diffHours < 24) return `${diffHours}小時前`
-    if (diffDays < 7) return `${diffDays}天前`
-    return date.toLocaleDateString("zh-Hant")
-  } else {
-    if (diffMins < 1) return "刚刚"
-    if (diffMins < 60) return `${diffMins}分钟前`
-    if (diffHours < 24) return `${diffHours}小时前`
-    if (diffDays < 7) return `${diffDays}天前`
-    return date.toLocaleDateString("zh-Hans")
-  }
-}
-
 export default function PrayersPage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
+  const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
 
-  const pathname = usePathname()
-  const { user } = useUser()
-  const { ids: hierarchyIds } = useUserHierarchyIds(undefined)
+  const { profile } = useUser()
+  const { hierarchies } = useHierarchies()
   const { prayers, loading } = usePrayers(
-    hierarchyIds,
+    selectedHierarchyId ? [selectedHierarchyId] : undefined,
     selectedCategory === "all" ? undefined : selectedCategory
   )
-  const { prayedIds, toggleAmen } = useAmenActions(user?.id || "")
+  const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
 
   const t = translations[lang]
 
-  const navItems = [
-    { id: "home", icon: Home, label: t.home, href: "/" },
-    { id: "targets", icon: Users, label: t.targets, href: "/targets" },
-    { id: "materials", icon: BookOpen, label: t.materials, href: "/materials" },
-    { id: "prayers", icon: Heart, label: t.prayers, href: "/prayers" },
-  ]
+  const handleAmen = async (prayerId: string) => {
+    if (!profile?.id) return
+    await toggleAmen(prayerId)
+  }
 
-  const isActive = (href: string) => pathname === href
+  const getTimeLabel = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) return t.today
+    if (diffDays === 1) return t.yesterday
+    return `${diffDays} ${t.daysAgo}`
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -146,11 +124,7 @@ export default function PrayersPage() {
             >
               {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
             </Button>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setPrayerDialogOpen(true)}
-            >
+            <Button size="sm" className="gap-1.5">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">{t.addPrayer}</span>
             </Button>
@@ -184,9 +158,7 @@ export default function PrayersPage() {
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Heart className="w-8 h-8 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">
-              {lang === "zh-Hant" ? "暫無代禱事項" : "暂无代祷事项"}
-            </p>
+            <p className="text-muted-foreground">{t.noPrayers}</p>
           </div>
         ) : (
           prayers.map((prayer) => (
@@ -201,7 +173,7 @@ export default function PrayersPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10 border-2 border-primary/20">
                       <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                        {prayer.posted_by_profile?.name?.charAt(0) || "用"}
+                        {prayer.posted_by_profile?.name?.charAt(0) || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -210,18 +182,18 @@ export default function PrayersPage() {
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-muted-foreground">
-                          {prayer.posted_by_profile?.name || "用戶"}
+                          {prayer.posted_by_profile?.name || t.postedBy}
                         </span>
                         <span className="text-xs text-muted-foreground">·</span>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatTimeAgo(prayer.created_at, lang)}
+                          {getTimeLabel(prayer.created_at)}
                         </span>
                       </div>
                     </div>
                   </div>
                   <Badge className={`text-xs ${categoryColors[prayer.category] || "bg-muted text-muted-foreground"}`}>
-                    {categoryLabels[prayer.category]?.[lang] || prayer.category}
+                    {categories.find((c) => c.id === prayer.category)?.label[lang] || prayer.category}
                   </Badge>
                 </div>
 
@@ -234,16 +206,16 @@ export default function PrayersPage() {
                     <MapPin className="w-3.5 h-3.5" />
                     <span>
                       {prayer.hierarchy
-                        ? lang === "zh-Hant"
-                          ? prayer.hierarchy.name_zh_hant
-                          : prayer.hierarchy.name_zh_hans
+                        ? (lang === "zh-Hant"
+                            ? prayer.hierarchy.name_zh_hant
+                            : prayer.hierarchy.name_zh_hans)
                         : "-"}
                     </span>
                   </div>
                   <Button
                     variant={prayedIds.has(prayer.id) ? "default" : "outline"}
                     size="sm"
-                    onClick={() => toggleAmen(prayer.id)}
+                    onClick={() => handleAmen(prayer.id)}
                     className={`gap-1.5 ${
                       prayedIds.has(prayer.id)
                         ? "bg-primary text-primary-foreground"
@@ -251,7 +223,9 @@ export default function PrayersPage() {
                     }`}
                   >
                     <Heart
-                      className={`w-4 h-4 ${prayedIds.has(prayer.id) ? "fill-current" : ""}`}
+                      className={`w-4 h-4 ${
+                        prayedIds.has(prayer.id) ? "fill-current" : ""
+                      }`}
                     />
                     <span>{t.amen}</span>
                     <span className="text-xs opacity-80">({prayer.amen_count})</span>
@@ -263,36 +237,7 @@ export default function PrayersPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40">
-        <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
-                isActive(item.href)
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <div
-                className={`p-2 rounded-xl transition-colors ${
-                  isActive(item.href) ? "bg-primary/10" : ""
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="h-safe-area-inset-bottom bg-card" />
-      </nav>
-
-      <PrayerFormDialog
-        open={prayerDialogOpen}
-        onOpenChange={setPrayerDialogOpen}
-      />
+      <BottomNavigation lang={lang} />
     </div>
   )
 }

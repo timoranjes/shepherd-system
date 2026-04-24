@@ -21,9 +21,9 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useMember, usePastoringLogs } from "@/hooks/use-members"
 import { useUser } from "@/hooks/use-user"
-import { MemberFormDialog } from "@/components/members/member-form-dialog"
 import { AddPastoringLogDrawer } from "@/components/pastoring-logs/add-pastoring-log-drawer"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { createClient } from "@/lib/supabase"
@@ -48,11 +48,12 @@ const translations = {
     phone: "電話",
     address: "地址",
     occupation: "職業",
-    introducer: "介紹人",
     birthday: "生日",
     notes: "備註",
     loading: "載入中...",
     noLogs: "暫無牧養紀錄",
+    deleteMember: "刪除",
+    deleteLog: "刪除紀錄",
   },
   "zh-Hans": {
     back: "返回",
@@ -69,31 +70,28 @@ const translations = {
     phone: "电话",
     address: "地址",
     occupation: "职业",
-    introducer: "介绍人",
     birthday: "生日",
     notes: "备注",
     loading: "载入中...",
     noLogs: "暂无牧养记录",
+    deleteMember: "删除",
+    deleteLog: "删除记录",
   },
 }
 
 const logTypes = {
-  gospel: { icon: Megaphone, color: "text-orange-500", bg: "bg-orange-100" },
-  home_gathering: { icon: Home, color: "text-blue-500", bg: "bg-blue-100" },
+  gospel_preaching: { icon: Megaphone, color: "text-orange-500", bg: "bg-orange-100" },
   home_meeting: { icon: Home, color: "text-blue-500", bg: "bg-blue-100" },
   morning_revival: { icon: Sun, color: "text-amber-500", bg: "bg-amber-100" },
-  bible_reading: { icon: BookOpen, color: "text-emerald-500", bg: "bg-emerald-100" },
   reading_together: { icon: BookOpen, color: "text-emerald-500", bg: "bg-emerald-100" },
   visitation: { icon: Users, color: "text-teal-500", bg: "bg-teal-100" },
   love_feast: { icon: Heart, color: "text-pink-500", bg: "bg-pink-100" },
 }
 
 const logTypeLabels = {
-  gospel: { "zh-Hant": "福音接觸", "zh-Hans": "福音接触" },
-  home_gathering: { "zh-Hant": "家聚會", "zh-Hans": "家聚会" },
+  gospel_preaching: { "zh-Hant": "傳福音", "zh-Hans": "传福音" },
   home_meeting: { "zh-Hant": "家聚會", "zh-Hans": "家聚会" },
   morning_revival: { "zh-Hant": "晨興", "zh-Hans": "晨兴" },
-  bible_reading: { "zh-Hant": "讀經", "zh-Hans": "读经" },
   reading_together: { "zh-Hant": "陪讀", "zh-Hans": "陪读" },
   visitation: { "zh-Hant": "探訪", "zh-Hans": "探访" },
   love_feast: { "zh-Hant": "愛筵", "zh-Hans": "爱筵" },
@@ -220,7 +218,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
           <Avatar className="w-24 h-24 border-4 border-primary/20">
             <AvatarImage src={member.avatar_url || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-3xl font-semibold">
-              {member.name_zh_hant.charAt(0)}
+              {(lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans).charAt(0)}
             </AvatarFallback>
           </Avatar>
 
@@ -273,7 +271,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
               <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
                 <Trash2 className="w-5 h-5 text-destructive" />
               </div>
-              <span className="text-xs text-destructive">{lang === "zh-Hant" ? "刪除" : "删除"}</span>
+              <span className="text-xs text-destructive">{t.deleteMember}</span>
             </button>
           </div>
         </section>
@@ -348,7 +346,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
             ) : (
               <div className="space-y-0">
                 {logs.map((log, index) => {
-                  const logType = logTypes[log.type] || logTypes.gospel
+                  const logType = logTypes[log.action] || logTypes.home_meeting
                   const IconComponent = logType.icon
 
                   return (
@@ -375,10 +373,10 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-foreground">
-                                  {logTypeLabels[log.type]?.[lang] || log.type}
+                                  {logTypeLabels[log.action]?.[lang] || log.action}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
-                                  {formatDate(log.created_at, lang)}
+                                  {formatDate(log.action_date || log.created_at, lang)}
                                 </span>
                               </div>
                             </div>
@@ -392,7 +390,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                                 {t.summary}
                               </p>
                               <p className="text-sm text-foreground leading-relaxed">
-                                {lang === "zh-Hant" ? log.summary_zh_hant : log.summary_zh_hans}
+                                {log.summary}
                               </p>
                             </div>
                           </CardContent>
@@ -428,18 +426,13 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         <div className="h-safe-area-inset-bottom bg-card" />
       </div>
 
-      <MemberFormDialog
-        open={memberDialogOpen}
-        onOpenChange={setMemberDialogOpen}
-        member={member}
-      />
-
       <AddPastoringLogDrawer
         open={logDrawerOpen}
         onOpenChange={setLogDrawerOpen}
         memberId={params.id}
         targetName={lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
         lang={lang}
+        onSuccess={() => {}}
       />
 
       <PrayerFormDialog
@@ -448,6 +441,8 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         hierarchyId={member?.hierarchy_id}
         memberId={params.id}
       />
+
+      <BottomNavigation lang={lang} />
     </div>
   )
 }

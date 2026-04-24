@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useState } from "react"
 import {
   Home,
   Users,
@@ -11,7 +9,6 @@ import {
   ChevronDown,
   UserPlus,
   Sun,
-  LogOut,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,11 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useUser } from "@/hooks/use-user"
+import { useMembers } from "@/hooks/use-members"
 import { useActivities } from "@/hooks/use-activities"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
-import { useUserHierarchyIds } from "@/hooks/use-hierarchies"
-import type { Activity, Prayer, Member } from "@/types/database"
+import { useHierarchies } from "@/hooks/use-hierarchies"
+import { createClient } from "@/lib/supabase"
 
 type Language = "zh-Hant" | "zh-Hans"
 
@@ -41,13 +40,13 @@ const translations = {
     recentActivity: "近期牧養動態",
     focusPrayer: "焦點代禱",
     amen: "阿們",
-    home: "首頁",
-    targets: "名單",
-    materials: "資源",
-    prayers: "代禱",
     selectLevel: "選擇管理層級",
-    logout: "登出",
+    today: "今天",
+    yesterday: "昨天",
+    daysAgo: "天前",
     loading: "載入中...",
+    noActivities: "暫無動態",
+    noPrayers: "暫無代禱事項",
   },
   "zh-Hans": {
     greeting: "主恩常伴",
@@ -58,105 +57,103 @@ const translations = {
     recentActivity: "近期牧养动态",
     focusPrayer: "焦点代祷",
     amen: "阿们",
-    home: "首页",
-    targets: "名单",
-    materials: "资源",
-    prayers: "代祷",
     selectLevel: "选择管理层级",
-    logout: "登出",
+    today: "今天",
+    yesterday: "昨天",
+    daysAgo: "天前",
     loading: "载入中...",
+    noActivities: "暂无动态",
+    noPrayers: "暂无代祷事项",
   },
 }
 
-function formatTimeAgo(dateString: string, lang: Language): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (lang === "zh-Hant") {
-    if (diffMins < 1) return "剛剛"
-    if (diffMins < 60) return `${diffMins}分鐘前`
-    if (diffHours < 24) return `${diffHours}小時前`
-    if (diffDays < 7) return `${diffDays}天前`
-    return date.toLocaleDateString("zh-Hant")
-  } else {
-    if (diffMins < 1) return "刚刚"
-    if (diffMins < 60) return `${diffMins}分钟前`
-    if (diffHours < 24) return `${diffHours}小时前`
-    if (diffDays < 7) return `${diffDays}天前`
-    return date.toLocaleDateString("zh-Hans")
-  }
+const actionTypeLabels = {
+  gospel_preaching: { "zh-Hant": "傳福音", "zh-Hans": "传福音" },
+  visitation: { "zh-Hant": "探訪", "zh-Hans": "探访" },
+  home_meeting: { "zh-Hant": "家聚會", "zh-Hans": "家聚会" },
+  morning_revival: { "zh-Hant": "晨興", "zh-Hans": "晨兴" },
+  reading_together: { "zh-Hant": "陪讀", "zh-Hans": "陪读" },
+  love_feast: { "zh-Hant": "愛筵", "zh-Hans": "爱筵" },
 }
 
 export default function HomePage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
-  const [selectedHierarchy, setSelectedHierarchy] = useState<{ id: string; name: Record<Language, string> } | null>(null)
-  const [gospelCount, setGospelCount] = useState(0)
-  const [newBelieverCount, setNewBelieverCount] = useState(0)
+  const { profile, loading: userLoading } = useUser()
+  const { hierarchies } = useHierarchies()
+  const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
 
-  const { user, profile, loading: userLoading, signOut } = useUser()
-  const { ids: hierarchyIds } = useUserHierarchyIds(profile?.id)
-  const { activities, loading: activitiesLoading } = useActivities(hierarchyIds, 5)
-  const { prayers, loading: prayersLoading } = usePrayers(hierarchyIds)
-  const { prayedIds, toggleAmen } = useAmenActions(user?.id ?? "")
+  const { members, loading: membersLoading } = useMembers(
+    selectedHierarchyId ? [selectedHierarchyId] : undefined
+  )
+
+  const { activities, loading: activitiesLoading } = useActivities(
+    selectedHierarchyId ? [selectedHierarchyId] : undefined,
+    10
+  )
+
+  const { prayers, loading: prayersLoading } = usePrayers(
+    selectedHierarchyId ? [selectedHierarchyId] : undefined
+  )
+
+  const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
+
   const t = translations[lang]
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (hierarchyIds.length === 0) return
+  const selectedHierarchy = hierarchies.find((h) => h.id === selectedHierarchyId) || null
 
-      const { createClient } = await import("@/lib/supabase")
-      const supabase = createClient()
+  const greetingName = profile?.name || "訪客"
+  const greetingTitle = profile?.role === "admin" ? t.brother : t.brother
 
-      const oneWeekAgo = new Date()
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+  const newGospelFriendsThisWeek = members.filter((m) => {
+    if (m.type !== "gospel") return false
+    const createdAt = new Date(m.created_at)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    return createdAt >= weekAgo
+  }).length
 
-      const { count: gospel } = await supabase
-        .from("members")
-        .select("*", { count: "exact", head: true })
-        .eq("type", "gospel")
-        .in("hierarchy_id", hierarchyIds)
-        .gte("created_at", oneWeekAgo.toISOString())
+  const sheepNeedingMorningRevival = members.filter((m) => {
+    return m.status === "晨興建立中" || m.status === "晨兴建立中" || m.status === "剛受浸" || m.status === "刚受浸"
+  }).length
 
-      const { count: believer } = await supabase
-        .from("members")
-        .select("*", { count: "exact", head: true })
-        .eq("type", "new_believer")
-        .in("hierarchy_id", hierarchyIds)
-        .gte("created_at", oneWeekAgo.toISOString())
+  const focusPrayer = prayers.find((p) => p.is_urgent) || prayers[0] || null
 
-      setGospelCount(gospel || 0)
-      setNewBelieverCount(believer || 0)
-    }
-
-    fetchStats()
-  }, [hierarchyIds])
-
-  const getInitials = (name: string) => {
-    return name.charAt(0)
+  const handleAmen = async (prayerId: string) => {
+    if (!profile?.id) return
+    await toggleAmen(prayerId)
   }
 
-  const pathname = usePathname()
+  const getTimeLabel = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
-  const navItems = [
-    { id: "home", icon: Home, label: t.home, href: "/" },
-    { id: "targets", icon: Users, label: t.targets, href: "/targets" },
-    { id: "materials", icon: BookOpen, label: t.materials, href: "/materials" },
-    { id: "prayers", icon: Heart, label: t.prayers, href: "/prayers" },
-  ]
+    if (diffDays === 0) return t.today
+    if (diffDays === 1) return t.yesterday
+    return `${diffDays} ${t.daysAgo}`
+  }
 
-  const isActive = (href: string) => pathname === href
+  const formatActivityContent = (activity: typeof activities[0]) => {
+    const memberName = lang === "zh-Hant"
+      ? activity.member?.name_zh_hant
+      : activity.member?.name_zh_hans
+    const actionLabel = actionTypeLabels[activity.type as keyof typeof actionTypeLabels]?.[lang] || activity.type
+    const userName = activity.user?.name || ""
 
-  useEffect(() => {
-    if (!userLoading && !user) {
-      window.location.href = "/login"
+    if (lang === "zh-Hant") {
+      return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
     }
-  }, [userLoading, user])
+    return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
+  }
 
-  const focusPrayer = prayers.find((p) => p.category === "gospel" || p.is_urgent)
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">{t.loading}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -168,40 +165,53 @@ export default function HomePage() {
             </div>
             <span className="font-semibold text-foreground">牧養管理</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
-              className="text-sm font-medium"
-            >
-              {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="w-8 h-8 cursor-pointer">
-                  <AvatarImage src={profile?.avatar_url || ""} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                    {profile?.name?.charAt(0) || "用"}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-destructive" onClick={signOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  {t.logout}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
+            className="text-sm font-medium"
+          >
+            {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
+          </Button>
         </div>
       </header>
 
       <main className="px-4 py-5 space-y-5">
         <section className="space-y-3">
           <h1 className="text-xl font-semibold text-foreground">
-            {t.greeting}，<span className="text-primary">{profile?.name || "用戶"}</span>
+            {t.greeting}，<span className="text-primary">{greetingName}</span> {greetingTitle}
           </h1>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between bg-card hover:bg-accent"
+              >
+                <span>
+                  {selectedHierarchy
+                    ? (lang === "zh-Hant" ? selectedHierarchy.name_zh_hant : selectedHierarchy.name_zh_hans)
+                    : t.selectLevel}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[calc(100vw-2rem)]">
+              {hierarchies.map((hierarchy) => (
+                <DropdownMenuItem
+                  key={hierarchy.id}
+                  onClick={() => setSelectedHierarchyId(hierarchy.id)}
+                  className={
+                    selectedHierarchyId === hierarchy.id
+                      ? "bg-accent text-accent-foreground"
+                      : ""
+                  }
+                >
+                  {lang === "zh-Hant" ? hierarchy.name_zh_hant : hierarchy.name_zh_hans}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </section>
 
         <section className="grid grid-cols-2 gap-3">
@@ -212,7 +222,9 @@ export default function HomePage() {
                   <UserPlus className="w-5 h-5 text-primary" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground mb-1">{gospelCount}</p>
+              <p className="text-3xl font-bold text-foreground mb-1">
+                {membersLoading ? "-" : newGospelFriendsThisWeek}
+              </p>
               <p className="text-sm text-muted-foreground leading-tight">
                 {t.newFriends}
               </p>
@@ -226,7 +238,9 @@ export default function HomePage() {
                   <Sun className="w-5 h-5 text-primary" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground mb-1">{newBelieverCount}</p>
+              <p className="text-3xl font-bold text-foreground mb-1">
+                {membersLoading ? "-" : sheepNeedingMorningRevival}
+              </p>
               <p className="text-sm text-muted-foreground leading-tight">
                 {t.sheepNeedCare}
               </p>
@@ -239,20 +253,18 @@ export default function HomePage() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               {activitiesLoading ? (
-                <p className="text-sm text-muted-foreground">{t.loading}</p>
+                <p className="text-center text-muted-foreground py-4">{t.loading}</p>
               ) : activities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {lang === "zh-Hant" ? "暫無活動記錄" : "暂无活动记录"}
-                </p>
+                <p className="text-center text-muted-foreground py-4">{t.noActivities}</p>
               ) : (
                 <div className="space-y-4">
                   {activities.map((activity, index) => (
                     <div key={activity.id} className="flex gap-3">
                       <div className="flex flex-col items-center">
                         <Avatar className="w-10 h-10 border-2 border-primary/20">
-                          <AvatarImage src={activity.user?.avatar_url || ""} />
+                          <AvatarImage src={activity.user?.avatar_url || ""} alt={activity.user?.name || ""} />
                           <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                            {activity.user?.name?.charAt(0) || "用"}
+                            {activity.user?.name?.charAt(0) || "?"}
                           </AvatarFallback>
                         </Avatar>
                         {index < activities.length - 1 && (
@@ -262,21 +274,21 @@ export default function HomePage() {
                       <div className="flex-1 pb-4">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs text-muted-foreground">
-                            {formatTimeAgo(activity.created_at, lang)}
+                            {getTimeLabel(activity.created_at)}
                           </span>
                           {activity.member && (
                             <Badge
                               variant="secondary"
                               className="text-xs py-0 px-2 bg-accent text-accent-foreground"
                             >
-                              {activity.member.name_zh_hant}
+                              {lang === "zh-Hant"
+                                ? activity.member.name_zh_hant
+                                : activity.member.name_zh_hans}
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-foreground leading-relaxed">
-                          {lang === "zh-Hant"
-                            ? activity.description_zh_hant
-                            : activity.description_zh_hans}
+                          {formatActivityContent(activity)}
                         </p>
                       </div>
                     </div>
@@ -287,9 +299,9 @@ export default function HomePage() {
           </Card>
         </section>
 
-        {focusPrayer && (
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">{t.focusPrayer}</h2>
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">{t.focusPrayer}</h2>
+          {focusPrayer ? (
             <Card className="bg-card border-border overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -297,10 +309,12 @@ export default function HomePage() {
                     variant="secondary"
                     className="text-xs py-0.5 px-2 bg-primary/10 text-primary"
                   >
-                    {focusPrayer.hierarchy?.name_zh_hant || "代禱"}
+                    {lang === "zh-Hant"
+                      ? focusPrayer.hierarchy?.name_zh_hant
+                      : focusPrayer.hierarchy?.name_zh_hans}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    {lang === "zh-Hant" ? "今日更新" : "今日更新"}
+                    {getTimeLabel(focusPrayer.created_at)}
                   </span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed mb-4">
@@ -310,7 +324,7 @@ export default function HomePage() {
                   <Button
                     variant={prayedIds.has(focusPrayer.id) ? "default" : "outline"}
                     size="sm"
-                    onClick={() => toggleAmen(focusPrayer.id)}
+                    onClick={() => handleAmen(focusPrayer.id)}
                     className={`gap-2 ${
                       prayedIds.has(focusPrayer.id)
                         ? "bg-primary text-primary-foreground"
@@ -320,40 +334,22 @@ export default function HomePage() {
                     <Heart
                       className={`w-4 h-4 ${prayedIds.has(focusPrayer.id) ? "fill-current" : ""}`}
                     />
-                    {t.amen} ({focusPrayer.amen_count || 0})
+                    {t.amen} ({focusPrayer.amen_count})
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          </section>
-        )}
+          ) : (
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 text-center text-muted-foreground">
+                {t.noPrayers}
+              </CardContent>
+            </Card>
+          )}
+        </section>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40">
-        <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
-                isActive(item.href)
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <div
-                className={`p-2 rounded-xl transition-colors ${
-                  isActive(item.href) ? "bg-primary/10" : ""
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="h-safe-area-inset-bottom bg-card" />
-      </nav>
+      <BottomNavigation lang={lang} />
     </div>
   )
 }

@@ -17,6 +17,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useMaterials } from "@/hooks/use-materials"
 import { UploadMaterialDialog } from "@/components/materials/upload-dialog"
 import type { Material } from "@/types/database"
@@ -272,31 +273,7 @@ export default function MaterialsPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40">
-        <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
-                isActive(item.href)
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <div
-                className={`p-2 rounded-xl transition-colors ${
-                  isActive(item.href) ? "bg-primary/10" : ""
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="h-safe-area-inset-bottom bg-card" />
-      </nav>
+      <BottomNavigation lang={lang} />
 
       <UploadMaterialDialog
         open={uploadDialogOpen}

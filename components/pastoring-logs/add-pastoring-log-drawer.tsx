@@ -15,7 +15,7 @@ import {
   DrawerFooter,
 } from "@/components/ui/drawer"
 import { createPastoringLog } from "@/actions/pastoring-log"
-import { pastoringLogSchema, logTypeOptions } from "@/lib/schemas/pastoring-log"
+import { pastoringLogSchema, actionTypeOptions } from "@/lib/schemas/pastoring-log"
 import type { PastoringLogFormValues } from "@/lib/schemas/pastoring-log"
 import { toast } from "sonner"
 
@@ -58,7 +58,7 @@ const translations = {
 }
 
 const actionTypeIcons: Record<string, typeof Megaphone> = {
-  gospel: Megaphone,
+  gospel_preaching: Megaphone,
   visitation: Users,
   home_meeting: Home,
   morning_revival: Sun,
@@ -88,13 +88,12 @@ export function AddPastoringLogDrawer({
     resolver: zodResolver(pastoringLogSchema),
     defaultValues: {
       action_date: new Date().toISOString().split("T")[0],
-      type: "home_meeting",
-      summary_zh_hant: "",
-      summary_zh_hans: "",
+      action: "home_meeting",
+      summary: "",
     },
   })
 
-  const selectedType = watch("type")
+  const selectedAction = watch("action")
 
   const onSubmit = async (data: PastoringLogFormValues) => {
     setSubmitting(true)
@@ -145,7 +144,6 @@ export function AddPastoringLogDrawer({
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="px-6 pb-4 space-y-6">
-              {/* Date Selector */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   {t.dateLabel}
@@ -168,21 +166,20 @@ export function AddPastoringLogDrawer({
                 )}
               </div>
 
-              {/* Action Type 3x2 Grid Buttons */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   {t.actionTypeLabel}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {logTypeOptions.map((option) => {
+                  {actionTypeOptions.map((option) => {
                     const Icon = actionTypeIcons[option.value]
-                    const isSelected = selectedType === option.value
+                    const isSelected = selectedAction === option.value
 
                     return (
                       <button
                         key={option.value}
                         type="button"
-                        onClick={() => setValue("type", option.value as PastoringLogFormValues["type"], { shouldValidate: true })}
+                        onClick={() => setValue("action", option.value, { shouldValidate: true })}
                         className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all ${
                           isSelected
                             ? "bg-emerald-50 border-emerald-600 text-emerald-700"
@@ -199,23 +196,22 @@ export function AddPastoringLogDrawer({
                     )
                   })}
                 </div>
-                {errors.type && (
-                  <p className="text-xs text-destructive">{errors.type.message}</p>
+                {errors.action && (
+                  <p className="text-xs text-destructive">{errors.action.message}</p>
                 )}
               </div>
 
-              {/* Summary Textarea */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   {t.summaryLabel}
                 </label>
                 <Textarea
-                  {...register("summary_zh_hant")}
+                  {...register("summary")}
                   placeholder={t.summaryPlaceholder}
                   className="min-h-[140px] resize-none bg-card border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
-                {errors.summary_zh_hant && (
-                  <p className="text-xs text-destructive">{errors.summary_zh_hant.message}</p>
+                {errors.summary && (
+                  <p className="text-xs text-destructive">{errors.summary.message}</p>
                 )}
               </div>
             </div>

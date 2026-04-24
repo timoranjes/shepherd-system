@@ -43,9 +43,8 @@ export async function createPastoringLog(
     const { error: insertError } = await supabase.from("pastoring_logs").insert({
       member_id: memberId,
       user_id: user.id,
-      type: validatedData.type,
-      summary_zh_hant: validatedData.summary_zh_hant,
-      summary_zh_hans: validatedData.summary_zh_hans || validatedData.summary_zh_hant,
+      action: validatedData.action,
+      summary: validatedData.summary,
       action_date: validatedData.action_date,
     })
 

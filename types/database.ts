@@ -48,9 +48,9 @@ export interface PastoringLog {
   id: string
   member_id: string
   user_id: string
-  type: "gospel" | "home_gathering" | "morning_revival" | "bible_reading"
-  summary_zh_hant: string
-  summary_zh_hans: string
+  action: "gospel_preaching" | "visitation" | "home_meeting" | "morning_revival" | "reading_together" | "love_feast"
+  summary: string
+  action_date: string
   partner_id?: string
   created_at: string
   user?: Profile
