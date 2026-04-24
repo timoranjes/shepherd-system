@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
+import { MemberFormDialog } from "@/components/members/member-form-dialog"
 import { useMembers } from "@/hooks/use-members"
 import { useHierarchies } from "@/hooks/use-hierarchies"
 
@@ -89,6 +90,7 @@ export default function TargetsPage() {
   const [activeFilter, setActiveFilter] = useState(0)
   const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [memberDialogOpen, setMemberDialogOpen] = useState(false)
 
   const { hierarchies } = useHierarchies()
   const { members, loading } = useMembers(
@@ -149,7 +151,7 @@ export default function TargetsPage() {
               className="pl-9 bg-card border-border"
             />
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1 shrink-0">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1 shrink-0" onClick={() => setMemberDialogOpen(true)}>
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t.addNew}</span>
           </Button>
@@ -301,6 +303,12 @@ export default function TargetsPage() {
           </div>
         )}
       </main>
+
+      <MemberFormDialog
+        open={memberDialogOpen}
+        onOpenChange={setMemberDialogOpen}
+        onSuccess={() => {}}
+      />
 
       <BottomNavigation lang={lang} />
     </div>

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
+import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
 import { useUser } from "@/hooks/use-user"
 import { useHierarchies } from "@/hooks/use-hierarchies"
@@ -83,6 +84,7 @@ export default function PrayersPage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
+  const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
 
   const { profile } = useUser()
   const { hierarchies } = useHierarchies()
@@ -124,7 +126,7 @@ export default function PrayersPage() {
             >
               {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
             </Button>
-            <Button size="sm" className="gap-1.5">
+            <Button size="sm" className="gap-1.5" onClick={() => setPrayerDialogOpen(true)}>
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">{t.addPrayer}</span>
             </Button>
@@ -236,6 +238,12 @@ export default function PrayersPage() {
           ))
         )}
       </main>
+
+      <PrayerFormDialog
+        open={prayerDialogOpen}
+        onOpenChange={setPrayerDialogOpen}
+        onSuccess={() => {}}
+      />
 
       <BottomNavigation lang={lang} />
     </div>
