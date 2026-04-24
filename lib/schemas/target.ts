@@ -3,25 +3,24 @@ import { z } from "zod"
 export const careTargetSchema = z.object({
   name: z.string().min(2, "姓名至少需要 2 個字元"),
   gender: z.enum(["男", "女"], { required_error: "性別為必填欄位" }),
-  age_group: z.enum(["青少年", "大專", "青職", "壯年", "年長"], {
-    required_error: "年齡段為必填欄位",
-  }),
-  phone: z.string().optional(),
-
   category: z.enum(["gospel_friend", "little_sheep"], {
     required_error: "照顧類別為必填欄位",
   }),
-  status: z.string().min(1, "狀態為必填欄位"),
-
   structure_id: z.string().min(1, "所屬小排為必填欄位"),
+  status: z.string().min(1, "狀態為必填欄位"),
+  life_stage: z.enum(["兒童", "中學生", "大專生", "青職", "壯年", "年長"]).optional(),
+  source: z.enum(["熟人介紹", "街頭接觸", "校園福音", "網絡接觸", "其他"]).optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  birthday: z.string().optional(),
   notes: z.string().optional(),
 }).refine(
   (data) => {
     if (data.category === "gospel_friend") {
-      return ["new_contact", "son_of_peace", "open", "seeking"].includes(data.status)
+      return ["first_contact", "warm_contact", "home_meeting", "ready_baptism"].includes(data.status)
     }
     if (data.category === "little_sheep") {
-      return ["newly_baptized", "morning_revival", "home_meeting", "lord_day"].includes(data.status)
+      return ["newly_baptized", "morning_revival", "stable_group", "stable_lord_day"].includes(data.status)
     }
     return false
   },
@@ -39,17 +38,17 @@ export const categoryOptions = [
 ] as const
 
 export const gospelFriendStatusOptions = [
-  { value: "new_contact", label: "初接觸" },
-  { value: "son_of_peace", label: "平安之子" },
-  { value: "open", label: "柔軟敞開" },
-  { value: "seeking", label: "有尋求" },
+  { value: "first_contact", label: "初接觸" },
+  { value: "warm_contact", label: "保持聯繫" },
+  { value: "home_meeting", label: "福音家聚會" },
+  { value: "ready_baptism", label: "渴慕受浸" },
 ] as const
 
 export const littleSheepStatusOptions = [
   { value: "newly_baptized", label: "剛受浸" },
   { value: "morning_revival", label: "晨興建立中" },
-  { value: "home_meeting", label: "穩定家聚會" },
-  { value: "lord_day", label: "穩定主日" },
+  { value: "stable_group", label: "穩定排聚會" },
+  { value: "stable_lord_day", label: "穩定主日" },
 ] as const
 
 export const genderOptions = [
@@ -57,10 +56,36 @@ export const genderOptions = [
   { value: "女", label: "女" },
 ] as const
 
-export const ageGroupOptions = [
-  { value: "青少年", label: "青少年" },
-  { value: "大專", label: "大專" },
+export const lifeStageOptions = [
+  { value: "兒童", label: "兒童" },
+  { value: "中學生", label: "中學生" },
+  { value: "大專生", label: "大專生" },
   { value: "青職", label: "青職" },
   { value: "壯年", label: "壯年" },
   { value: "年長", label: "年長" },
+] as const
+
+export const sourceOptions = [
+  { value: "熟人介紹", label: "熟人介紹" },
+  { value: "街頭接觸", label: "街頭接觸" },
+  { value: "校園福音", label: "校園福音" },
+  { value: "網絡接觸", label: "網絡接觸" },
+  { value: "其他", label: "其他" },
+] as const
+
+export const statusLabels: Record<string, { "zh-Hant": string; "zh-Hans": string }> = {
+  first_contact: { "zh-Hant": "初接觸", "zh-Hans": "初接触" },
+  warm_contact: { "zh-Hant": "保持聯繫", "zh-Hans": "保持联系" },
+  home_meeting: { "zh-Hant": "福音家聚會", "zh-Hans": "福音家聚会" },
+  ready_baptism: { "zh-Hant": "渴慕受浸", "zh-Hans": "渴慕受浸" },
+  newly_baptized: { "zh-Hant": "剛受浸", "zh-Hans": "刚受浸" },
+  morning_revival: { "zh-Hant": "晨興建立中", "zh-Hans": "晨兴建立中" },
+  stable_group: { "zh-Hant": "穩定排聚會", "zh-Hans": "稳定排聚会" },
+  stable_lord_day: { "zh-Hant": "穩定主日", "zh-Hans": "稳定主日" },
+}
+
+export const mockStructureOptions = [
+  { value: "mock-fo-tan-1", label: "火炭一排" },
+  { value: "mock-college", label: "大專排" },
+  { value: "mock-youth-career", label: "青職排" },
 ] as const

@@ -24,11 +24,14 @@ export interface Member {
   id: string
   name_zh_hant: string
   name_zh_hans: string
+  gender?: "男" | "女"
   phone?: string
   address_zh_hant?: string
   address_zh_hans?: string
   occupation_zh_hant?: string
   occupation_zh_hans?: string
+  life_stage?: string
+  source?: string
   birthday?: string
   notes_zh_hant?: string
   notes_zh_hans?: string

@@ -1,12 +1,24 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { InputField, TextareaField } from "@/components/ui/form-field"
 import { SelectField } from "@/components/ui/select-field"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import type { Member, Hierarchy } from "@/types/database"
+import { careTargetSchema, type CareTargetFormValues } from "@/lib/schemas/target"
+import {
+  categoryOptions,
+  gospelFriendStatusOptions,
+  littleSheepStatusOptions,
+  genderOptions,
+  lifeStageOptions,
+  sourceOptions,
+  mockStructureOptions,
+} from "@/lib/schemas/target"
+import type { Member } from "@/types/database"
 
 interface MemberFormDialogProps {
   open: boolean
@@ -16,114 +28,80 @@ interface MemberFormDialogProps {
   onSuccess?: () => void
 }
 
-const statusOptions = {
-  gospel: [
-    { value: "初接觸", label: "初接觸" },
-    { value: "平安之子", label: "平安之子" },
-    { value: "柔軟敞開", label: "柔軟敞開" },
-    { value: "有尋求", label: "有尋求" },
-  ],
-  new_believer: [
-    { value: "剛受浸", label: "剛受浸" },
-    { value: "晨興建立中", label: "晨興建立中" },
-    { value: "穩定家聚會", label: "穩定家聚會" },
-  ],
-}
-
-const typeOptions = [
-  { value: "gospel", label: "福音朋友" },
-  { value: "new_believer", label: "初信小羊" },
-]
-
 export function MemberFormDialog({
   open,
   onOpenChange,
   member,
-  hierarchyIds = [],
   onSuccess,
 }: MemberFormDialogProps) {
   const [loading, setLoading] = useState(false)
-  const [hierarchies, setHierarchies] = useState<Hierarchy[]>([])
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    occupation: "",
-    birthday: "",
-    notes: "",
-    type: "gospel" as "gospel" | "new_believer",
-    status: "",
-    hierarchy_id: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<CareTargetFormValues>({
+    resolver: zodResolver(careTargetSchema),
+    defaultValues: {
+      name: "",
+      gender: undefined,
+      category: "gospel_friend",
+      structure_id: "",
+      status: "",
+      life_stage: undefined,
+      source: undefined,
+      phone: "",
+      address: "",
+      birthday: "",
+      notes: "",
+    },
+  })
+
+  const category = watch("category")
   const isEdit = !!member
 
   useEffect(() => {
-    const fetchHierarchies = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from("hierarchies")
-        .select("*")
-        .eq("level", "group")
-        .order("sort_order")
-
-      if (data) {
-        setHierarchies(data)
-      }
-    }
-
-    if (open) {
-      fetchHierarchies()
-    }
-  }, [open])
-
-  useEffect(() => {
     if (member) {
-      setForm({
+      reset({
         name: member.name_zh_hant || member.name_zh_hans || "",
+        gender: member.gender,
+        category: member.type === "gospel" ? "gospel_friend" : "little_sheep",
+        structure_id: member.hierarchy_id || "",
+        status: member.status || "",
+        life_stage: member.life_stage,
+        source: member.source,
         phone: member.phone || "",
         address: member.address_zh_hant || member.address_zh_hans || "",
-        occupation: member.occupation_zh_hant || member.occupation_zh_hans || "",
         birthday: member.birthday || "",
         notes: member.notes_zh_hant || member.notes_zh_hans || "",
-        type: member.type,
-        status: member.status || "",
-        hierarchy_id: member.hierarchy_id,
       })
     } else {
-      setForm({
+      reset({
         name: "",
+        gender: undefined,
+        category: "gospel_friend",
+        structure_id: "",
+        status: "",
+        life_stage: undefined,
+        source: undefined,
         phone: "",
         address: "",
-        occupation: "",
         birthday: "",
         notes: "",
-        type: "gospel",
-        status: "",
-        hierarchy_id: hierarchyIds[0] || "",
       })
     }
-    setErrors({})
-  }, [member, open])
+  }, [member, open, reset])
 
-  const handleSubmit = async () => {
-    const newErrors: Record<string, string> = {}
+  const statusOptions = category === "gospel_friend" ? gospelFriendStatusOptions : littleSheepStatusOptions
 
-    if (!form.name.trim()) {
-      newErrors.name = "姓名為必填欄位"
-    }
+  useEffect(() => {
+    setValue("status", "", { shouldValidate: false })
+  }, [category, setValue])
 
-    if (!form.hierarchy_id) {
-      newErrors.hierarchy_id = "小排為必填欄位"
-    }
-
-    setErrors(newErrors)
-
-    if (Object.keys(newErrors).length > 0) {
-      return
-    }
-
+  const onSubmit = async (data: CareTargetFormValues) => {
     setLoading(true)
 
     try {
@@ -131,19 +109,22 @@ export function MemberFormDialog({
       const { data: { user } } = await supabase.auth.getUser()
 
       const payload = {
-        name_zh_hant: form.name,
-        name_zh_hans: form.name,
-        phone: form.phone || null,
-        address_zh_hant: form.address || null,
-        address_zh_hans: form.address || null,
-        occupation_zh_hant: form.occupation || null,
-        occupation_zh_hans: form.occupation || null,
-        birthday: form.birthday || null,
-        notes_zh_hant: form.notes || null,
-        notes_zh_hans: form.notes || null,
-        type: form.type,
-        status: form.status || null,
-        hierarchy_id: form.hierarchy_id,
+        name_zh_hant: data.name,
+        name_zh_hans: data.name,
+        gender: data.gender || null,
+        phone: data.phone || null,
+        address_zh_hant: data.address || null,
+        address_zh_hans: data.address || null,
+        occupation_zh_hant: null,
+        occupation_zh_hans: null,
+        life_stage: data.life_stage || null,
+        source: data.source || null,
+        birthday: data.birthday || null,
+        notes_zh_hant: data.notes || null,
+        notes_zh_hans: data.notes || null,
+        type: data.category === "gospel_friend" ? "gospel" : "new_believer",
+        status: data.status || null,
+        hierarchy_id: data.structure_id,
       }
 
       if (isEdit && member) {
@@ -175,90 +156,104 @@ export function MemberFormDialog({
     }
   }
 
-  const hierarchyOptions = hierarchies.map((h) => ({
-    value: h.id,
-    label: h.name_zh_hant,
-  }))
-
-  const currentStatusOptions = statusOptions[form.type] || statusOptions.gospel
-
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "編輯對象" : "新增對象"}
       description={isEdit ? "修改對象資料" : "新增福音朋友或初信小羊"}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onSubmit)}
       submitLabel={isEdit ? "儲存" : "新增"}
       loading={loading}
     >
       <InputField
         label="姓名"
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-        error={errors.name}
+        {...register("name")}
+        error={errors.name?.message}
         placeholder="請輸入姓名"
       />
 
       <SelectField
+        label="性別"
+        value={watch("gender") || ""}
+        onValueChange={(v) => setValue("gender", v as "男" | "女", { shouldValidate: true })}
+        options={genderOptions}
+        placeholder="選擇性別"
+        error={errors.gender?.message}
+      />
+
+      <SelectField
         label="類型"
-        value={form.type}
-        onValueChange={(v) => setForm({ ...form, type: v as "gospel" | "new_believer", status: "" })}
-        options={typeOptions}
+        value={watch("category")}
+        onValueChange={(v) => setValue("category", v as "gospel_friend" | "little_sheep", { shouldValidate: true })}
+        options={categoryOptions}
+        error={errors.category?.message}
       />
 
       <SelectField
         label="小排"
-        value={form.hierarchy_id}
-        onValueChange={(v) => setForm({ ...form, hierarchy_id: v })}
-        options={hierarchyOptions}
+        value={watch("structure_id")}
+        onValueChange={(v) => setValue("structure_id", v, { shouldValidate: true })}
+        options={mockStructureOptions}
         placeholder="選擇小排"
-        error={errors.hierarchy_id}
+        error={errors.structure_id?.message}
       />
 
       <SelectField
         label="狀態"
-        value={form.status}
-        onValueChange={(v) => setForm({ ...form, status: v })}
-        options={currentStatusOptions}
+        value={watch("status")}
+        onValueChange={(v) => setValue("status", v, { shouldValidate: true })}
+        options={statusOptions}
         placeholder="選擇狀態"
+        error={errors.status?.message}
+      />
+
+      <SelectField
+        label="身分階段 (選填)"
+        value={watch("life_stage") || ""}
+        onValueChange={(v) => setValue("life_stage", v as CareTargetFormValues["life_stage"], { shouldValidate: true })}
+        options={lifeStageOptions}
+        placeholder="選擇身分階段"
+        error={errors.life_stage?.message}
+      />
+
+      <SelectField
+        label="接觸來源 (選填)"
+        value={watch("source") || ""}
+        onValueChange={(v) => setValue("source", v as CareTargetFormValues["source"], { shouldValidate: true })}
+        options={sourceOptions}
+        placeholder="選擇接觸來源"
+        error={errors.source?.message}
       />
 
       <InputField
-        label="電話"
-        value={form.phone}
-        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+        label="電話 (選填)"
+        {...register("phone")}
         placeholder="請輸入電話"
         type="tel"
+        error={errors.phone?.message}
       />
 
       <InputField
-        label="地址"
-        value={form.address}
-        onChange={(e) => setForm({ ...form, address: e.target.value })}
+        label="地址 (選填)"
+        {...register("address")}
         placeholder="請輸入地址"
+        error={errors.address?.message}
       />
 
       <InputField
-        label="職業"
-        value={form.occupation}
-        onChange={(e) => setForm({ ...form, occupation: e.target.value })}
-        placeholder="請輸入職業"
-      />
-
-      <InputField
-        label="生日"
-        value={form.birthday}
-        onChange={(e) => setForm({ ...form, birthday: e.target.value })}
+        label="生日 (選填)"
+        {...register("birthday")}
         placeholder="YYYY-MM-DD"
         type="date"
+        error={errors.birthday?.message}
       />
 
       <TextareaField
-        label="備註"
-        value={form.notes}
-        onChange={(e) => setForm({ ...form, notes: e.target.value })}
+        label="備註 (選填)"
+        {...register("notes")}
         placeholder="請輸入備註"
+        error={errors.notes?.message}
       />
     </FormDialog>
   )
