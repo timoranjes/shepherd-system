@@ -105,7 +105,7 @@ export function MemberFormDialog({
       })
     }
     setErrors({})
-  }, [member, hierarchyIds, open])
+  }, [member, open])
 
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {}
