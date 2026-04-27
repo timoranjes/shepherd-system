@@ -1,19 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase"
-import type { RealtimeChannel } from "@supabase/supabase-js"
 import type { Member, PastoringLog } from "@/types/database"
 
 export function useMembers(hierarchyIds?: string[]) {
-  const [members, setMembers] = useState<Member[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchMembers = async () => {
-      setLoading(true)
+  return useQuery({
+    queryKey: ["members", hierarchyIds],
+    queryFn: async () => {
+      const supabase = createClient()
       let query = supabase
         .from("members")
         .select(`
@@ -23,47 +20,22 @@ export function useMembers(hierarchyIds?: string[]) {
         `)
         .order("created_at", { ascending: false })
 
-      if (hierarchyIds && hierarchyIds.length > 0) {
+      if (hierarchyIds?.length) {
         query = query.in("hierarchy_id", hierarchyIds)
       }
 
       const { data, error } = await query
-      if (!error && data) {
-        setMembers(data)
-      }
-      setLoading(false)
-    }
-
-    fetchMembers()
-
-    const channel: RealtimeChannel = supabase
-      .channel("members_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "members" },
-        () => {
-          fetchMembers()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [hierarchyIds])
-
-  return { members, loading }
+      if (error) throw error
+      return data as Member[]
+    },
+  })
 }
 
 export function useMember(id: string) {
-  const [member, setMember] = useState<Member | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchMember = async () => {
-      setLoading(true)
+  return useQuery({
+    queryKey: ["member", id],
+    queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("members")
         .select(`
@@ -74,27 +46,18 @@ export function useMember(id: string) {
         .eq("id", id)
         .single()
 
-      if (!error && data) {
-        setMember(data)
-      }
-      setLoading(false)
-    }
-
-    if (id) fetchMember()
-  }, [id])
-
-  return { member, loading }
+      if (error) throw error
+      return data as Member
+    },
+    enabled: !!id,
+  })
 }
 
 export function usePastoringLogs(memberId: string) {
-  const [logs, setLogs] = useState<PastoringLog[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchLogs = async () => {
-      setLoading(true)
+  return useQuery({
+    queryKey: ["pastoringLogs", memberId],
+    queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("pastoring_logs")
         .select(`
@@ -105,14 +68,14 @@ export function usePastoringLogs(memberId: string) {
         .eq("member_id", memberId)
         .order("created_at", { ascending: false })
 
-      if (!error && data) {
-        setLogs(data)
-      }
-      setLoading(false)
-    }
+      if (error) throw error
+      return data as PastoringLog[]
+    },
+    enabled: !!memberId,
+  })
+}
 
-    if (memberId) fetchLogs()
-  }, [memberId])
-
-  return { logs, loading }
+export function useInvalidateMembers() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: ["members"] })
 }

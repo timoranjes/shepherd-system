@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useMember, usePastoringLogs } from "@/hooks/use-members"
-import { useUser } from "@/hooks/use-user"
+import { useUser } from "@/contexts/auth-context"
 import { AddPastoringLogDrawer } from "@/components/pastoring-logs/add-pastoring-log-drawer"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { createClient } from "@/lib/supabase"
@@ -131,8 +131,8 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
   const [logDrawerOpen, setLogDrawerOpen] = useState(false)
   const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
 
-  const { member, loading: memberLoading } = useMember(params.id)
-  const { logs, loading: logsLoading } = usePastoringLogs(params.id)
+  const { data: member, isLoading: memberLoading } = useMember(params.id)
+  const { data: logs = [], isLoading: logsLoading } = usePastoringLogs(params.id)
   const { user } = useUser()
 
   const t = translations[lang]

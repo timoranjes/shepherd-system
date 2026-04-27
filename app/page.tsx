@@ -21,12 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
-import { useUser } from "@/hooks/use-user"
+import { useUser } from "@/contexts/auth-context"
 import { useMembers } from "@/hooks/use-members"
 import { useActivities } from "@/hooks/use-activities"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
 import { useHierarchies } from "@/hooks/use-hierarchies"
-import { createClient } from "@/lib/supabase"
 
 type Language = "zh-Hant" | "zh-Hans"
 
@@ -78,20 +77,20 @@ const actionTypeLabels = {
 
 export default function HomePage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
-  const { profile, loading: userLoading } = useUser()
+  const { profile } = useUser()
   const { hierarchies } = useHierarchies()
   const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
 
-  const { members, loading: membersLoading } = useMembers(
+  const { data: members = [], isLoading: membersLoading } = useMembers(
     selectedHierarchyId ? [selectedHierarchyId] : undefined
   )
 
-  const { activities, loading: activitiesLoading } = useActivities(
+  const { data: activities = [], isLoading: activitiesLoading } = useActivities(
     selectedHierarchyId ? [selectedHierarchyId] : undefined,
     10
   )
 
-  const { prayers, loading: prayersLoading } = usePrayers(
+  const { data: prayers = [], isLoading: prayersLoading } = usePrayers(
     selectedHierarchyId ? [selectedHierarchyId] : undefined
   )
 
@@ -145,14 +144,6 @@ export default function HomePage() {
       return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
     }
     return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
-  }
-
-  if (userLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">{t.loading}</p>
-      </div>
-    )
   }
 
   return (

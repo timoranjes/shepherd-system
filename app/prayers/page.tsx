@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
-import { useUser } from "@/hooks/use-user"
+import { useUser } from "@/contexts/auth-context"
 import { useHierarchies } from "@/hooks/use-hierarchies"
 
 type Language = "zh-Hant" | "zh-Hans"
@@ -88,7 +88,7 @@ export default function PrayersPage() {
 
   const { profile } = useUser()
   const { hierarchies } = useHierarchies()
-  const { prayers, loading } = usePrayers(
+  const { data: prayers = [], isLoading: loading } = usePrayers(
     selectedHierarchyId ? [selectedHierarchyId] : undefined,
     selectedCategory === "all" ? undefined : selectedCategory
   )

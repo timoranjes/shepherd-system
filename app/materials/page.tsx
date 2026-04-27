@@ -139,7 +139,7 @@ export default function MaterialsPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   const pathname = usePathname()
-  const { materials, loading } = useMaterials(activeCategory)
+  const { data: materials = [], isLoading: loading } = useMaterials(activeCategory)
 
   const t = translations[lang]
 

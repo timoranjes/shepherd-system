@@ -1,21 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase"
-import type { RealtimeChannel } from "@supabase/supabase-js"
 import type { Activity } from "@/types/database"
 
 export function useActivities(hierarchyIds?: string[], limit = 10) {
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [loading, setLoading] = useState(true)
+  return useQuery({
+    queryKey: ["activities", hierarchyIds, limit],
+    queryFn: async () => {
+      const supabase = createClient()
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchActivities = async () => {
-      setLoading(true)
-
-      if (hierarchyIds && hierarchyIds.length > 0) {
+      if (hierarchyIds?.length) {
         const { data: memberData } = await supabase
           .from("members")
           .select("id")
@@ -34,44 +29,22 @@ export function useActivities(hierarchyIds?: string[], limit = 10) {
           .order("created_at", { ascending: false })
           .limit(limit)
 
-        if (!error && data) {
-          setActivities(data)
-        }
-      } else {
-        const { data, error } = await supabase
-          .from("activities")
-          .select(`
-            *,
-            user:profiles!activities_user_id_fkey(id, name, avatar_url),
-            member:members(id, name_zh_hant, name_zh_hans)
-          `)
-          .order("created_at", { ascending: false })
-          .limit(limit)
-
-        if (!error && data) {
-          setActivities(data)
-        }
+        if (error) throw error
+        return data as Activity[]
       }
-      setLoading(false)
-    }
 
-    fetchActivities()
+      const { data, error } = await supabase
+        .from("activities")
+        .select(`
+          *,
+          user:profiles!activities_user_id_fkey(id, name, avatar_url),
+          member:members(id, name_zh_hant, name_zh_hans)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(limit)
 
-    const channel: RealtimeChannel = supabase
-      .channel("activities_changes")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "activities" },
-        () => {
-          fetchActivities()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [hierarchyIds, limit])
-
-  return { activities, loading }
+      if (error) throw error
+      return data as Activity[]
+    },
+  })
 }

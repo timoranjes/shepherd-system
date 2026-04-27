@@ -1,77 +1,62 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase"
 import type { Hierarchy } from "@/types/database"
 
 export function useHierarchies() {
-  const [hierarchies, setHierarchies] = useState<Hierarchy[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchHierarchies = async () => {
-      setLoading(true)
+  const query = useQuery({
+    queryKey: ["hierarchies"],
+    queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("hierarchies")
         .select("*")
         .order("level")
         .order("sort_order")
 
-      if (!error && data) {
-        setHierarchies(data)
-      }
-      setLoading(false)
-    }
-
-    fetchHierarchies()
-  }, [])
+      if (error) throw error
+      return data as Hierarchy[]
+    },
+  })
 
   const getHierarchyTree = () => {
-    const regions = hierarchies.filter((h) => h.level === "region")
-    const subRegions = hierarchies.filter((h) => h.level === "sub_region")
-    const groups = hierarchies.filter((h) => h.level === "group")
-
-    return { regions, subRegions, groups }
+    const hierarchies = query.data || []
+    return {
+      regions: hierarchies.filter((h) => h.level === "region"),
+      subRegions: hierarchies.filter((h) => h.level === "sub_region"),
+      groups: hierarchies.filter((h) => h.level === "group"),
+    }
   }
 
-  return { hierarchies, loading, getHierarchyTree }
+  return {
+    hierarchies: query.data || [],
+    loading: query.isLoading,
+    getHierarchyTree,
+  }
 }
 
 export function useUserHierarchyIds(profileId?: string) {
-  const [ids, setIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  return useQuery({
+    queryKey: ["userHierarchyIds", profileId],
+    queryFn: async () => {
+      if (!profileId) return []
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    const fetchIds = async () => {
-      if (!profileId) {
-        setIds([])
-        setLoading(true)
-        return
-      }
-
+      const supabase = createClient()
       const { data } = await supabase.rpc("get_user_hierarchy_ids", {
         p_profile_id: profileId,
       })
 
-      if (data) {
-        setIds(data)
-      } else {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("hierarchy_id")
-          .eq("id", profileId)
-          .single()
-        setIds(profile?.hierarchy_id ? [profile.hierarchy_id] : [])
-      }
-      setLoading(false)
-    }
+      if (data) return data
 
-    fetchIds()
-  }, [profileId])
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("hierarchy_id")
+        .eq("id", profileId)
+        .single()
 
-  return { ids, loading }
+      return profile?.hierarchy_id ? [profile.hierarchy_id] : []
+    },
+    enabled: !!profileId,
+  })
 }

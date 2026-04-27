@@ -93,7 +93,7 @@ export default function TargetsPage() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
 
   const { hierarchies } = useHierarchies()
-  const { members, loading } = useMembers(
+  const { data: members = [], isLoading: loading } = useMembers(
     selectedHierarchyId ? [selectedHierarchyId] : undefined
   )
 

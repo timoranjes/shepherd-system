@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { QueryProvider } from '@/components/providers/query-provider'
+import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -39,7 +41,11 @@ export default function RootLayout({
     <html lang="zh-Hant" className="bg-background">
       <body className="font-sans antialiased">
         <ErrorBoundary>
-          {children}
+          <QueryProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </QueryProvider>
         </ErrorBoundary>
         <Toaster />
       </body>
