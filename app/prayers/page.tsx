@@ -2,9 +2,6 @@
 
 import { useState } from "react"
 import {
-  Home,
-  Users,
-  BookOpen,
   Heart,
   Plus,
   Clock,
@@ -13,12 +10,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Header } from "@/components/layout/Header"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
 import { useUser } from "@/contexts/auth-context"
-
-type Language = "zh-Hant" | "zh-Hans"
+import { useLanguage } from "@/contexts/language-context"
 
 const translations = {
   "zh-Hant": {
@@ -35,7 +33,6 @@ const translations = {
     yesterday: "昨天",
     daysAgo: "天前",
     postedBy: "發起人",
-    loading: "載入中...",
     noPrayers: "暫無代禱事項",
   },
   "zh-Hans": {
@@ -52,7 +49,6 @@ const translations = {
     yesterday: "昨天",
     daysAgo: "天前",
     postedBy: "发起人",
-    loading: "载入中...",
     noPrayers: "暂无代祷事项",
   },
 }
@@ -75,7 +71,7 @@ const categoryColors: Record<string, string> = {
 }
 
 export default function PrayersPage() {
-  const [lang, setLang] = useState<Language>("zh-Hant")
+  const { language } = useLanguage()
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
 
@@ -85,7 +81,7 @@ export default function PrayersPage() {
   )
   const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
 
-  const t = translations[lang]
+  const t = translations[language]
 
   const handleAmen = async (prayerId: string) => {
     if (!profile?.id) return
@@ -105,25 +101,19 @@ export default function PrayersPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+      <Header />
+
+      {/* Action Bar */}
+      <div className="sticky top-[57px] z-40 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-lg font-semibold text-foreground">{t.title}</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
-              className="text-sm font-medium"
-            >
-              {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setPrayerDialogOpen(true)}>
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.addPrayer}</span>
-            </Button>
-          </div>
+          <Button size="sm" className="gap-1.5" onClick={() => setPrayerDialogOpen(true)}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t.addPrayer}</span>
+          </Button>
         </div>
 
+        {/* Category Filters */}
         <div className="px-4 pb-3">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             {categories.map((category) => (
@@ -136,16 +126,38 @@ export default function PrayersPage() {
                     : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
               >
-                {category.label[lang]}
+                {category.label[language]}
               </button>
             ))}
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="px-4 py-4 space-y-4">
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">{t.loading}</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="bg-card border-border shadow-sm overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-3/4 mb-3" />
+                  <div className="flex items-center justify-end pt-2 border-t border-border">
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : prayers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -171,7 +183,7 @@ export default function PrayersPage() {
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-foreground text-base">
-                        {lang === "zh-Hant" ? prayer.title_zh_hant : prayer.title_zh_hans}
+                        {language === "zh-Hant" ? prayer.title_zh_hant : prayer.title_zh_hans}
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-muted-foreground">
@@ -186,12 +198,12 @@ export default function PrayersPage() {
                     </div>
                   </div>
                   <Badge className={`text-xs ${categoryColors[prayer.category] || "bg-muted text-muted-foreground"}`}>
-                    {categories.find((c) => c.id === prayer.category)?.label[lang] || prayer.category}
+                    {categories.find((c) => c.id === prayer.category)?.label[language] || prayer.category}
                   </Badge>
                 </div>
 
                 <p className="text-sm text-foreground/80 leading-relaxed mb-3">
-                  {lang === "zh-Hant" ? prayer.content_zh_hant : prayer.content_zh_hans}
+                  {language === "zh-Hant" ? prayer.content_zh_hant : prayer.content_zh_hans}
                 </p>
 
                 <div className="flex items-center justify-end pt-2 border-t border-border">
@@ -226,7 +238,7 @@ export default function PrayersPage() {
         onSuccess={() => {}}
       />
 
-      <BottomNavigation lang={lang} />
+      <BottomNavigation />
     </div>
   )
 }

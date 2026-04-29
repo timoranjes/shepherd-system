@@ -5,8 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Users, BookOpen, Heart, Plus } from "lucide-react"
 import { MemberFormDialog } from "@/components/members/member-form-dialog"
-
-type Language = "zh-Hant" | "zh-Hans"
+import { useLanguage } from "@/contexts/language-context"
 
 const translations = {
   "zh-Hant": {
@@ -23,13 +22,10 @@ const translations = {
   },
 }
 
-interface BottomNavigationProps {
-  lang: Language
-}
-
-export function BottomNavigation({ lang }: BottomNavigationProps) {
+export function BottomNavigation() {
   const pathname = usePathname()
-  const t = translations[lang]
+  const { language } = useLanguage()
+  const t = translations[language]
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const isActive = (href: string) => {

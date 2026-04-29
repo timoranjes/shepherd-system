@@ -1,25 +1,25 @@
 "use client"
 
-import { useState } from "react"
 import {
-  Home,
   Users,
   BookOpen,
   Heart,
   UserPlus,
   Sun,
+  Quote,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Header } from "@/components/layout/Header"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useUser } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { useMembers } from "@/hooks/use-members"
 import { useActivities } from "@/hooks/use-activities"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
-
-type Language = "zh-Hant" | "zh-Hans"
 
 const translations = {
   "zh-Hant": {
@@ -68,7 +68,7 @@ const actionTypeLabels = {
 }
 
 export default function HomePage() {
-  const [lang, setLang] = useState<Language>("zh-Hant")
+  const { language } = useLanguage()
   const { profile } = useUser()
 
   const { data: members = [], isLoading: membersLoading } = useMembers()
@@ -79,10 +79,10 @@ export default function HomePage() {
 
   const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
 
-  const t = translations[lang]
+  const t = translations[language]
 
   const greetingName = profile?.name || "訪客"
-  const greetingTitle = profile?.role === "admin" ? t.brother : t.brother
+  const greetingTitle = profile?.gender || t.brother
 
   const newGospelFriendsThisWeek = members.filter((m) => {
     if (m.type !== "gospel") return false
@@ -115,13 +115,13 @@ export default function HomePage() {
   }
 
   const formatActivityContent = (activity: typeof activities[0]) => {
-    const memberName = lang === "zh-Hant"
+    const memberName = language === "zh-Hant"
       ? activity.member?.name_zh_hant
       : activity.member?.name_zh_hans
-    const actionLabel = actionTypeLabels[activity.type as keyof typeof actionTypeLabels]?.[lang] || activity.type
+    const actionLabel = actionTypeLabels[activity.type as keyof typeof actionTypeLabels]?.[language] || activity.type
     const userName = activity.user?.name || ""
 
-    if (lang === "zh-Hant") {
+    if (language === "zh-Hant") {
       return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
     }
     return `${userName}${actionLabel}${memberName ? ` ${memberName}` : ""}`
@@ -129,24 +129,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Sun className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-foreground">牧養管理</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
-            className="text-sm font-medium"
-          >
-            {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
-          </Button>
-        </div>
-      </header>
+      <Header />
 
       <main className="px-4 py-5 space-y-5">
         <section className="space-y-3">
@@ -189,12 +172,41 @@ export default function HomePage() {
           </Card>
         </section>
 
+        {/* Scripture Quote Block */}
+        <section className="relative">
+          <Card className="bg-primary/5 border-primary/20 overflow-hidden">
+            <CardContent className="p-5">
+              <div className="flex gap-3">
+                <Quote className="w-5 h-5 text-primary/60 shrink-0 mt-1" />
+                <div className="space-y-2">
+                  <p className="text-sm text-foreground/80 leading-relaxed font-serif italic">
+                    "務要牧養你們中間神的羣羊，按著神旨意照管他們；不是出於勉強，乃是出於甘心；不是因為貪財，乃是出於樂意；"
+                  </p>
+                  <p className="text-xs text-primary/70 font-medium text-right">
+                    （彼前 5:2）
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">{t.recentActivity}</h2>
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               {activitiesLoading ? (
-                <p className="text-center text-muted-foreground py-4">{t.loading}</p>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : activities.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4">{t.noActivities}</p>
               ) : (
@@ -222,7 +234,7 @@ export default function HomePage() {
                               variant="secondary"
                               className="text-xs py-0 px-2 bg-accent text-accent-foreground"
                             >
-                              {lang === "zh-Hant"
+                              {language === "zh-Hant"
                                 ? activity.member.name_zh_hant
                                 : activity.member.name_zh_hans}
                             </Badge>
@@ -242,7 +254,18 @@ export default function HomePage() {
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">{t.focusPrayer}</h2>
-          {focusPrayer ? (
+          {prayersLoading ? (
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <div className="flex justify-end">
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : focusPrayer ? (
             <Card className="bg-card border-border overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -251,7 +274,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed mb-4">
-                  {lang === "zh-Hant" ? focusPrayer.content_zh_hant : focusPrayer.content_zh_hans}
+                  {language === "zh-Hant" ? focusPrayer.content_zh_hant : focusPrayer.content_zh_hans}
                 </p>
                 <div className="flex justify-end">
                   <Button
@@ -282,7 +305,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <BottomNavigation lang={lang} />
+      <BottomNavigation />
     </div>
   )
 }

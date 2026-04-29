@@ -1,9 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import {
-  ArrowLeft,
   Phone,
   MessageCircle,
   Pencil,
@@ -20,17 +18,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Header } from "@/components/layout/Header"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useMember, usePastoringLogs } from "@/hooks/use-members"
 import { useUser } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { AddPastoringLogDrawer } from "@/components/pastoring-logs/add-pastoring-log-drawer"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
 import type { PastoringLog } from "@/types/database"
-
-type Language = "zh-Hant" | "zh-Hans"
 
 const translations = {
   "zh-Hant": {
@@ -50,10 +49,13 @@ const translations = {
     occupation: "職業",
     birthday: "生日",
     notes: "備註",
-    loading: "載入中...",
     noLogs: "暫無牧養紀錄",
     deleteMember: "刪除",
     deleteLog: "刪除紀錄",
+    notFound: "找不到對象",
+    confirmDeleteMember: "確定要刪除此對象嗎？此操作無法復原。",
+    confirmDeleteLog: "確定要刪除此牧養紀錄嗎？",
+    deleted: "已刪除",
   },
   "zh-Hans": {
     back: "返回",
@@ -72,10 +74,13 @@ const translations = {
     occupation: "职业",
     birthday: "生日",
     notes: "备注",
-    loading: "载入中...",
     noLogs: "暂无牧养记录",
     deleteMember: "删除",
     deleteLog: "删除记录",
+    notFound: "找不到对象",
+    confirmDeleteMember: "确定要删除此对象吗？此操作无法还原。",
+    confirmDeleteLog: "确定要删除此牧养记录吗？",
+    deleted: "已删除",
   },
 }
 
@@ -113,19 +118,16 @@ const statusColors: Record<string, string> = {
   "稳定家聚会": "bg-emerald-100 text-emerald-700",
 }
 
-function formatDate(dateString: string, lang: Language): string {
+function formatDate(dateString: string, lang: "zh-Hant" | "zh-Hans"): string {
   const date = new Date(dateString)
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
-  if (lang === "zh-Hant") {
-    return `${year}年${month}月${day}日`
-  }
   return `${year}年${month}月${day}日`
 }
 
 export default function TargetProfilePage({ params }: { params: { id: string } }) {
-  const [lang, setLang] = useState<Language>("zh-Hant")
+  const { language } = useLanguage()
   const [activeTab, setActiveTab] = useState("logs")
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [logDrawerOpen, setLogDrawerOpen] = useState(false)
@@ -135,7 +137,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
   const { data: logs = [], isLoading: logsLoading } = usePastoringLogs(params.id)
   const { user } = useUser()
 
-  const t = translations[lang]
+  const t = translations[language]
 
   const handleCall = () => {
     if (member?.phone) {
@@ -151,32 +153,88 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
   }
 
   const handleDeleteMember = async () => {
-    if (!confirm(lang === "zh-Hant" ? "確定要刪除此對象嗎？此操作無法復原。" : "确定要删除此对象吗？此操作无法还原。")) return
+    if (!confirm(t.confirmDeleteMember)) return
     const supabase = createClient()
     const { error } = await supabase.from("members").delete().eq("id", params.id)
     if (error) {
       toast.error(error.message)
       return
     }
-    toast.success("已刪除")
+    toast.success(t.deleted)
     window.location.href = "/targets"
   }
 
   const handleDeleteLog = async (logId: string) => {
-    if (!confirm(lang === "zh-Hant" ? "確定要刪除此牧養紀錄嗎？" : "确定要删除此牧养记录吗？")) return
+    if (!confirm(t.confirmDeleteLog)) return
     const supabase = createClient()
     const { error } = await supabase.from("pastoring_logs").delete().eq("id", logId)
     if (error) {
       toast.error(error.message)
       return
     }
-    toast.success("已刪除")
+    toast.success(t.deleted)
   }
 
   if (memberLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">{t.loading}</p>
+      <div className="min-h-screen bg-background pb-24">
+        <Header showBackButton backHref="/targets" backLabel={t.back} />
+        
+        <main className="px-4 py-5 space-y-5">
+          {/* Avatar Skeleton */}
+          <section className="flex flex-col items-center text-center space-y-3">
+            <Skeleton className="w-24 h-24 rounded-full" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+            
+            {/* Action Buttons Skeleton */}
+            <div className="flex items-center gap-6 pt-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Tabs Skeleton */}
+          <Tabs defaultValue="logs" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl">
+              <TabsTrigger value="info" className="rounded-lg">
+                {t.basicInfo}
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-lg">
+                {t.pastoringLogs}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="logs" className="mt-4 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                    {i < 3 && <Skeleton className="w-0.5 h-24" />}
+                  </div>
+                  <div className="flex-1 pb-6">
+                    <Card className="bg-card border-border shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                        <Skeleton className="h-3 w-32 mb-3" />
+                        <Skeleton className="h-4 w-full mb-1" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              ))}
+            </TabsContent>
+          </Tabs>
+        </main>
+
+<BottomNavigation />
       </div>
     )
   }
@@ -184,47 +242,30 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
   if (!member) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">
-          {lang === "zh-Hant" ? "找不到對象" : "找不到对象"}
-        </p>
+        <Header showBackButton backHref="/targets" backLabel={t.back} />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-muted-foreground">{t.notFound}</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link
-            href="/targets"
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm">{t.back}</span>
-          </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
-            className="text-sm font-medium"
-          >
-            {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
-          </Button>
-        </div>
-      </header>
+      <Header showBackButton backHref="/targets" backLabel={t.back} />
 
       <main className="px-4 py-5 space-y-5">
         <section className="flex flex-col items-center text-center space-y-3">
           <Avatar className="w-24 h-24 border-4 border-primary/20">
             <AvatarImage src={member.avatar_url || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-3xl font-semibold">
-              {(lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans).charAt(0)}
+              {(language === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans).charAt(0)}
             </AvatarFallback>
           </Avatar>
 
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">
-              {lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
+              {language === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
             </h1>
             <div className="flex items-center justify-center gap-2 flex-wrap">
               {member.status && (
@@ -292,7 +333,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                   <div className="flex justify-between items-start">
                     <span className="text-sm text-muted-foreground">{t.name}</span>
                     <span className="text-sm font-medium text-foreground">
-                      {lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
+                      {language === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
                     </span>
                   </div>
                   <div className="h-px bg-border" />
@@ -304,14 +345,14 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                   <div className="flex justify-between items-start">
                     <span className="text-sm text-muted-foreground">{t.address}</span>
                     <span className="text-sm font-medium text-foreground text-right max-w-[60%]">
-                      {lang === "zh-Hant" ? member.address_zh_hant : member.address_zh_hans || "-"}
+                      {language === "zh-Hant" ? member.address_zh_hant : member.address_zh_hans || "-"}
                     </span>
                   </div>
                   <div className="h-px bg-border" />
                   <div className="flex justify-between items-start">
                     <span className="text-sm text-muted-foreground">{t.occupation}</span>
                     <span className="text-sm font-medium text-foreground">
-                      {lang === "zh-Hant" ? member.occupation_zh_hant : member.occupation_zh_hans || "-"}
+                      {language === "zh-Hant" ? member.occupation_zh_hant : member.occupation_zh_hans || "-"}
                     </span>
                   </div>
                   <div className="h-px bg-border" />
@@ -323,7 +364,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                   <div className="space-y-2">
                     <span className="text-sm text-muted-foreground">{t.notes}</span>
                     <p className="text-sm text-foreground leading-relaxed">
-                      {lang === "zh-Hant" ? member.notes_zh_hant : member.notes_zh_hans || "-"}
+                      {language === "zh-Hant" ? member.notes_zh_hant : member.notes_zh_hans || "-"}
                     </p>
                   </div>
                 </div>
@@ -333,7 +374,29 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
 
           <TabsContent value="logs" className="mt-4">
             {logsLoading ? (
-              <p className="text-center text-muted-foreground py-8">{t.loading}</p>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                      {i < 3 && <Skeleton className="w-0.5 h-24" />}
+                    </div>
+                    <div className="flex-1 pb-6">
+                      <Card className="bg-card border-border shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-3 w-20" />
+                          </div>
+                          <Skeleton className="h-3 w-32 mb-3" />
+                          <Skeleton className="h-4 w-full mb-1" />
+                          <Skeleton className="h-4 w-3/4" />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : logs.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">{t.noLogs}</p>
             ) : (
@@ -366,10 +429,10 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-foreground">
-                                  {logTypeLabels[log.action]?.[lang] || log.action}
+                                  {logTypeLabels[log.action]?.[language] || log.action}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
-                                  {formatDate(log.action_date || log.created_at, lang)}
+                                  {formatDate(log.action_date || log.created_at, language)}
                                 </span>
                               </div>
                             </div>
@@ -423,8 +486,8 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         open={logDrawerOpen}
         onOpenChange={setLogDrawerOpen}
         memberId={params.id}
-        targetName={lang === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
-        lang={lang}
+        targetName={language === "zh-Hant" ? member.name_zh_hant : member.name_zh_hans}
+        lang={language}
         onSuccess={() => {}}
       />
 
@@ -434,7 +497,7 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
         memberId={params.id}
       />
 
-      <BottomNavigation lang={lang} />
+      <BottomNavigation />
     </div>
   )
 }

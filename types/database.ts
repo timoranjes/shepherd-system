@@ -4,6 +4,8 @@ export interface Profile {
   email: string
   avatar_url?: string
   role: "admin" | "member"
+  gender?: "弟兄" | "姊妹"
+  default_avatar?: string
   created_at: string
   updated_at: string
 }

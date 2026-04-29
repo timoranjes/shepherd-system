@@ -1,37 +1,29 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
-  Home,
-  Users,
-  BookOpen,
-  Heart,
   Upload,
   Share2,
   FileText,
   Music,
   Video,
+  BookOpen,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Header } from "@/components/layout/Header"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useMaterials } from "@/hooks/use-materials"
 import { UploadMaterialDialog } from "@/components/materials/upload-dialog"
+import { useLanguage } from "@/contexts/language-context"
 import type { Material } from "@/types/database"
-
-type Language = "zh-Hant" | "zh-Hans"
 
 const translations = {
   "zh-Hant": {
     title: "屬靈資源",
     upload: "上傳資源",
-    home: "首頁",
-    targets: "名單",
-    materials: "資源",
-    prayers: "代禱",
     uploadedBy: "上傳",
     suitableFor: "適合",
     share: "分享發送",
@@ -40,15 +32,11 @@ const translations = {
     newBeliever: "初信造就",
     lifeCourse: "生命課程",
     hymns: "詩歌分享",
-    loading: "載入中...",
+    noMaterials: "暫無資源",
   },
   "zh-Hans": {
     title: "属灵资源",
     upload: "上传资源",
-    home: "首页",
-    targets: "名单",
-    materials: "资源",
-    prayers: "代祷",
     uploadedBy: "上传",
     suitableFor: "适合",
     share: "分享发送",
@@ -57,18 +45,18 @@ const translations = {
     newBeliever: "初信造就",
     lifeCourse: "生命课程",
     hymns: "诗歌分享",
-    loading: "载入中...",
+    noMaterials: "暂无资源",
   },
 }
 
-const categoryConfig: Record<string, { label: Record<Language, string> }> = {
+const categoryConfig: Record<string, { label: Record<"zh-Hant" | "zh-Hans", string> }> = {
   gospel: { label: { "zh-Hant": "福音單張", "zh-Hans": "福音单张" } },
   new_believer: { label: { "zh-Hant": "初信造就", "zh-Hans": "初信造就" } },
   life_course: { label: { "zh-Hant": "生命課程", "zh-Hans": "生命课程" } },
   hymns: { label: { "zh-Hant": "詩歌分享", "zh-Hans": "诗歌分享" } },
 }
 
-const resourceTypeConfig: Record<string, { icon: typeof FileText; color: string; label: Record<Language, string> }> = {
+const resourceTypeConfig: Record<string, { icon: typeof FileText; color: string; label: Record<"zh-Hant" | "zh-Hans", string> }> = {
   pdf: { icon: FileText, color: "bg-red-500 text-white", label: { "zh-Hant": "PDF", "zh-Hans": "PDF" } },
   article: { icon: FileText, color: "bg-blue-500 text-white", label: { "zh-Hant": "文章", "zh-Hans": "文章" } },
   video: { icon: Video, color: "bg-purple-500 text-white", label: { "zh-Hant": "影片", "zh-Hans": "视频" } },
@@ -134,14 +122,13 @@ const coverGradients: Record<string, string> = {
 }
 
 export default function MaterialsPage() {
-  const [lang, setLang] = useState<Language>("zh-Hant")
+  const { language } = useLanguage()
   const [activeCategory, setActiveCategory] = useState("all")
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
-  const pathname = usePathname()
   const { data: materials = [], isLoading: loading } = useMaterials(activeCategory)
 
-  const t = translations[lang]
+  const t = translations[language]
 
   const categories = [
     { id: "all", label: t.all },
@@ -152,12 +139,12 @@ export default function MaterialsPage() {
   ]
 
   const handleShare = async (material: Material) => {
-    const title = lang === "zh-Hant" ? material.title_zh_hant : material.title_zh_hans
+    const title = language === "zh-Hant" ? material.title_zh_hant : material.title_zh_hans
     if (navigator.share) {
       try {
         await navigator.share({
           title,
-          text: `${lang === "zh-Hant" ? "分享屬靈資源" : "分享属灵资源"}：${title}`,
+          text: `${language === "zh-Hant" ? "分享屬靈資源" : "分享属灵资源"}：${title}`,
           url: material.file_url || window.location.href,
         })
       } catch {
@@ -168,38 +155,23 @@ export default function MaterialsPage() {
     }
   }
 
-  const navItems = [
-    { id: "home", icon: Home, label: t.home, href: "/" },
-    { id: "targets", icon: Users, label: t.targets, href: "/targets" },
-    { id: "materials", icon: BookOpen, label: t.materials, href: "/materials" },
-    { id: "prayers", icon: Heart, label: t.prayers, href: "/prayers" },
-  ]
-
-  const isActive = (href: string) => pathname === href
-
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+      <Header />
+
+      {/* Action Bar */}
+      <div className="sticky top-[57px] z-40 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-lg font-semibold text-foreground">{t.title}</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLang(lang === "zh-Hant" ? "zh-Hans" : "zh-Hant")}
-              className="text-sm font-medium"
-            >
-              {lang === "zh-Hant" ? "繁/簡" : "简/繁"}
-            </Button>
-            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1" onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.upload}</span>
-            </Button>
-          </div>
+          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1" onClick={() => setUploadDialogOpen(true)}>
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">{t.upload}</span>
+          </Button>
         </div>
-      </header>
+      </div>
 
       <main className="px-4 py-4 space-y-4">
+        {/* Category Filters */}
         <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
           <div className="flex gap-2 pb-1">
             {categories.map((category) => (
@@ -219,10 +191,22 @@ export default function MaterialsPage() {
         </div>
 
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">{t.loading}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="bg-card border-border shadow-sm overflow-hidden flex flex-col">
+                <Skeleton className="h-28 w-full rounded-none" />
+                <CardContent className="p-3 flex flex-col flex-1">
+                  <Skeleton className="h-4 w-full mb-1" />
+                  <Skeleton className="h-4 w-3/4 mb-3" />
+                  <Skeleton className="h-3 w-16 mb-3" />
+                  <Skeleton className="h-9 w-full rounded-md mt-auto" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : materials.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            {lang === "zh-Hant" ? "暫無資源" : "暂无资源"}
+            {t.noMaterials}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -240,13 +224,13 @@ export default function MaterialsPage() {
 
                     <Badge className={`absolute top-2 right-2 text-xs font-medium ${typeConfig?.color || "bg-gray-500 text-white"}`}>
                       <TypeIcon className="w-3 h-3 mr-1" />
-                      {typeConfig?.label[lang] || material.type.toUpperCase()}
+                      {typeConfig?.label[language] || material.type.toUpperCase()}
                     </Badge>
                   </div>
 
                   <CardContent className="p-3 flex flex-col flex-1">
                     <h3 className="font-semibold text-sm text-foreground line-clamp-2 mb-1">
-                      {lang === "zh-Hant" ? material.title_zh_hant : material.title_zh_hans}
+                      {language === "zh-Hant" ? material.title_zh_hant : material.title_zh_hans}
                     </h3>
 
                     <div className="text-xs text-muted-foreground space-y-0.5 mb-3">
@@ -273,7 +257,7 @@ export default function MaterialsPage() {
         )}
       </main>
 
-      <BottomNavigation lang={lang} />
+      <BottomNavigation />
 
       <UploadMaterialDialog
         open={uploadDialogOpen}

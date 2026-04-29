@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
     hierarchy_level TEXT CHECK (hierarchy_level IN ('大区', '小区', '小排')),
     hierarchy_id UUID,
+    gender TEXT CHECK (gender IN ('弟兄', '姊妹')),
+    default_avatar TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
