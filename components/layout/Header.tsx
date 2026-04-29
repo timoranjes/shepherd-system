@@ -122,7 +122,8 @@ export function Header({ showBackButton = false, backHref = "/", backLabel = "è¿
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem
-                onClick={() => {
+                onSelect={(e) => {
+                  e.preventDefault()
                   // Placeholder for avatar selection dialog
                   // Will be implemented later
                 }}
@@ -133,8 +134,12 @@ export function Header({ showBackButton = false, backHref = "/", backLabel = "è¿
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={signOut}
-                className="cursor-pointer text-destructive focus:text-destructive"
+                variant="destructive"
+                onSelect={(e) => {
+                  e.preventDefault()
+                  signOut()
+                }}
+                className="cursor-pointer"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 ç™»å‡º
