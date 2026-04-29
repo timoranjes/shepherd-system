@@ -6,7 +6,6 @@ export const careTargetSchema = z.object({
   category: z.enum(["gospel_friend", "little_sheep"], {
     required_error: "照顧類別為必填欄位",
   }),
-  structure_id: z.string().min(1, "所屬小排為必填欄位"),
   status: z.string().min(1, "狀態為必填欄位"),
   life_stage: z.enum(["兒童", "中學生", "大專生", "青職", "壯年", "年長"]).optional(),
   source: z.enum(["熟人介紹", "街頭接觸", "校園福音", "網絡接觸", "其他"]).optional(),
@@ -83,9 +82,3 @@ export const statusLabels: Record<string, { "zh-Hant": string; "zh-Hans": string
   stable_group: { "zh-Hant": "穩定排聚會", "zh-Hans": "稳定排聚会" },
   stable_lord_day: { "zh-Hant": "穩定主日", "zh-Hans": "稳定主日" },
 }
-
-export const mockStructureOptions = [
-  { value: "mock-fo-tan-1", label: "火炭一排" },
-  { value: "mock-college", label: "大專排" },
-  { value: "mock-youth-career", label: "青職排" },
-] as const

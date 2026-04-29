@@ -8,7 +8,6 @@ import {
   Heart,
   Plus,
   Clock,
-  MapPin,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,7 +17,6 @@ import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { PrayerFormDialog } from "@/components/prayers/prayer-form-dialog"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
 import { useUser } from "@/contexts/auth-context"
-import { useHierarchies } from "@/hooks/use-hierarchies"
 
 type Language = "zh-Hant" | "zh-Hans"
 
@@ -33,8 +31,6 @@ const translations = {
     serving: "服事",
     urgent: "緊急",
     amen: "阿們",
-    filterByGroup: "按小排篩選",
-    allGroups: "全部小排",
     today: "今天",
     yesterday: "昨天",
     daysAgo: "天前",
@@ -52,8 +48,6 @@ const translations = {
     serving: "服事",
     urgent: "紧急",
     amen: "阿们",
-    filterByGroup: "按小排筛选",
-    allGroups: "全部小排",
     today: "今天",
     yesterday: "昨天",
     daysAgo: "天前",
@@ -83,13 +77,10 @@ const categoryColors: Record<string, string> = {
 export default function PrayersPage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
   const [prayerDialogOpen, setPrayerDialogOpen] = useState(false)
 
   const { profile } = useUser()
-  const { hierarchies } = useHierarchies()
   const { data: prayers = [], isLoading: loading } = usePrayers(
-    selectedHierarchyId ? [selectedHierarchyId] : undefined,
     selectedCategory === "all" ? undefined : selectedCategory
   )
   const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
@@ -203,17 +194,7 @@ export default function PrayersPage() {
                   {lang === "zh-Hant" ? prayer.content_zh_hant : prayer.content_zh_hans}
                 </p>
 
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>
-                      {prayer.hierarchy
-                        ? (lang === "zh-Hant"
-                            ? prayer.hierarchy.name_zh_hant
-                            : prayer.hierarchy.name_zh_hans)
-                        : "-"}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-end pt-2 border-t border-border">
                   <Button
                     variant={prayedIds.has(prayer.id) ? "default" : "outline"}
                     size="sm"

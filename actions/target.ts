@@ -50,7 +50,6 @@ export async function createCareTarget(
       phone: validatedData.phone || null,
       type: typeMap[validatedData.category],
       status: validatedData.status,
-      hierarchy_id: validatedData.structure_id,
       notes_zh_hant: validatedData.notes || null,
       notes_zh_hans: validatedData.notes || null,
       created_by: user.id,

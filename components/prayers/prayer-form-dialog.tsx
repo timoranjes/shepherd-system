@@ -10,7 +10,6 @@ import { toast } from "sonner"
 interface PrayerFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  hierarchyId?: string
   memberId?: string
   onSuccess?: () => void
 }
@@ -26,7 +25,6 @@ const categoryOptions = [
 export function PrayerFormDialog({
   open,
   onOpenChange,
-  hierarchyId = "",
   memberId,
   onSuccess,
 }: PrayerFormDialogProps) {
@@ -38,7 +36,6 @@ export function PrayerFormDialog({
     content_zh_hans: "",
     category: "gospel",
     is_urgent: false,
-    hierarchy_id: hierarchyId,
   })
 
   const handleSubmit = async () => {
@@ -57,7 +54,6 @@ export function PrayerFormDialog({
         content_zh_hans: form.content_zh_hans || form.content_zh_hant,
         category: form.category as "gospel" | "new_believers" | "family" | "serving" | "urgent",
         is_urgent: form.is_urgent,
-        hierarchy_id: form.hierarchy_id || user?.id,
         posted_by: user?.id,
       })
       if (error) throw error
@@ -69,7 +65,6 @@ export function PrayerFormDialog({
         content_zh_hans: "",
         category: "gospel",
         is_urgent: false,
-        hierarchy_id: hierarchyId,
       })
       onOpenChange(false)
       onSuccess?.()

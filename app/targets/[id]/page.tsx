@@ -232,13 +232,6 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
                   {member.status}
                 </Badge>
               )}
-              <span className="text-sm text-muted-foreground">
-                {member.hierarchy && (
-                  <>
-                    {lang === "zh-Hant" ? member.hierarchy.name_zh_hant : member.hierarchy.name_zh_hans}
-                  </>
-                )}
-              </span>
             </div>
           </div>
 
@@ -438,7 +431,6 @@ export default function TargetProfilePage({ params }: { params: { id: string } }
       <PrayerFormDialog
         open={prayerDialogOpen}
         onOpenChange={setPrayerDialogOpen}
-        hierarchyId={member?.hierarchy_id}
         memberId={params.id}
       />
 

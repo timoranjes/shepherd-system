@@ -4,20 +4,8 @@ export interface Profile {
   email: string
   avatar_url?: string
   role: "admin" | "member"
-  hierarchy_level?: "大区" | "小区" | "小排"
-  hierarchy_id?: string
   created_at: string
   updated_at: string
-}
-
-export interface Hierarchy {
-  id: string
-  name_zh_hant: string
-  name_zh_hans: string
-  level: "region" | "sub_region" | "group"
-  parent_id?: string
-  sort_order: number
-  created_at: string
 }
 
 export interface Member {
@@ -38,12 +26,10 @@ export interface Member {
   avatar_url?: string
   type: "gospel" | "new_believer"
   status?: string
-  hierarchy_id: string
   assigned_to?: string
   created_by?: string
   created_at: string
   updated_at: string
-  hierarchy?: Hierarchy
   assigned_to_profile?: Profile
 }
 
@@ -82,12 +68,10 @@ export interface Prayer {
   content_zh_hans: string
   category: "gospel" | "new_believers" | "family" | "serving" | "urgent"
   is_urgent: boolean
-  hierarchy_id: string
   posted_by: string
   amen_count: number
   created_at: string
   posted_by_profile?: Profile
-  hierarchy?: Hierarchy
 }
 
 export interface AmenAction {

@@ -4,27 +4,25 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/lib/supabase"
 import type { Member, PastoringLog } from "@/types/database"
 
-export function useMembers(hierarchyIds?: string[]) {
+/**
+ * Fetch members for the current user (RLS auto-filters by user)
+ * No hierarchy filtering needed - Supabase RLS handles it
+ */
+export function useMembers() {
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: ["members", hierarchyIds],
+    queryKey: ["members"],
     queryFn: async () => {
       const supabase = createClient()
-      let query = supabase
+      const { data, error } = await supabase
         .from("members")
         .select(`
           *,
-          hierarchy:hierarchies(id, name_zh_hant, name_zh_hans, level),
           assigned_to_profile:profiles!members_assigned_to_fkey(id, name, avatar_url)
         `)
         .order("created_at", { ascending: false })
 
-      if (hierarchyIds?.length) {
-        query = query.in("hierarchy_id", hierarchyIds)
-      }
-
-      const { data, error } = await query
       if (error) throw error
       return data as Member[]
     },
@@ -40,7 +38,6 @@ export function useMember(id: string) {
         .from("members")
         .select(`
           *,
-          hierarchy:hierarchies(id, name_zh_hant, name_zh_hans, level),
           assigned_to_profile:profiles!members_assigned_to_fkey(id, name, avatar_url)
         `)
         .eq("id", id)

@@ -9,24 +9,15 @@ import {
   Heart,
   Search,
   Plus,
-  ChevronDown,
-  MapPin,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { MemberFormDialog } from "@/components/members/member-form-dialog"
 import { useMembers } from "@/hooks/use-members"
-import { useHierarchies } from "@/hooks/use-hierarchies"
 
 type Language = "zh-Hant" | "zh-Hans"
 type MemberType = "gospel" | "new_believer"
@@ -88,14 +79,10 @@ export default function TargetsPage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const [memberType, setMemberType] = useState<MemberType>("gospel")
   const [activeFilter, setActiveFilter] = useState(0)
-  const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
 
-  const { hierarchies } = useHierarchies()
-  const { data: members = [], isLoading: loading } = useMembers(
-    selectedHierarchyId ? [selectedHierarchyId] : undefined
-  )
+  const { data: members = [], isLoading: loading } = useMembers()
 
   const t = translations[lang]
   const filters = memberType === "gospel" ? gospelFilters[lang] : believerFilters[lang]
@@ -115,11 +102,6 @@ export default function TargetsPage() {
 
     return true
   })
-
-  const hierarchyGroups = [...new Set(members.map((m) => m.hierarchy_id))]
-  const groupOptions = hierarchies.filter((h) => hierarchyGroups.includes(h.id))
-
-  const selectedHierarchy = hierarchies.find((h) => h.id === selectedHierarchyId)
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -204,44 +186,6 @@ export default function TargetsPage() {
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-between bg-card hover:bg-accent"
-            >
-              <span className="text-sm">
-                {selectedHierarchy
-                  ? (lang === "zh-Hant" ? selectedHierarchy.name_zh_hant : selectedHierarchy.name_zh_hans)
-                  : t.allGroups}
-              </span>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[calc(100vw-2rem)]">
-            <DropdownMenuItem
-              onClick={() => setSelectedHierarchyId(null)}
-              className={selectedHierarchyId === null ? "bg-accent text-accent-foreground" : ""}
-            >
-              {t.allGroups}
-            </DropdownMenuItem>
-            {groupOptions.map((group) => (
-              <DropdownMenuItem
-                key={group.id}
-                onClick={() => setSelectedHierarchyId(group.id)}
-                className={
-                  selectedHierarchyId === group.id
-                    ? "bg-accent text-accent-foreground"
-                    : ""
-                }
-              >
-                {lang === "zh-Hant" ? group.name_zh_hant : group.name_zh_hans}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {loading ? (
           <p className="text-center text-muted-foreground py-8">{t.loading}</p>
         ) : filteredMembers.length === 0 ? (
@@ -283,17 +227,6 @@ export default function TargetsPage() {
                             </Badge>
                           )}
                         </div>
-
-                        {member.hierarchy && (
-                          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                            <MapPin className="w-3 h-3" />
-                            <span>
-                              {lang === "zh-Hant"
-                                ? member.hierarchy.name_zh_hant
-                                : member.hierarchy.name_zh_hans}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -6,26 +6,18 @@ import {
   Users,
   BookOpen,
   Heart,
-  ChevronDown,
   UserPlus,
   Sun,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { BottomNavigation } from "@/components/layout/BottomNavigation"
 import { useUser } from "@/contexts/auth-context"
 import { useMembers } from "@/hooks/use-members"
 import { useActivities } from "@/hooks/use-activities"
 import { usePrayers, useAmenActions } from "@/hooks/use-prayers"
-import { useHierarchies } from "@/hooks/use-hierarchies"
 
 type Language = "zh-Hant" | "zh-Hans"
 
@@ -78,27 +70,16 @@ const actionTypeLabels = {
 export default function HomePage() {
   const [lang, setLang] = useState<Language>("zh-Hant")
   const { profile } = useUser()
-  const { hierarchies } = useHierarchies()
-  const [selectedHierarchyId, setSelectedHierarchyId] = useState<string | null>(null)
 
-  const { data: members = [], isLoading: membersLoading } = useMembers(
-    selectedHierarchyId ? [selectedHierarchyId] : undefined
-  )
+  const { data: members = [], isLoading: membersLoading } = useMembers()
 
-  const { data: activities = [], isLoading: activitiesLoading } = useActivities(
-    selectedHierarchyId ? [selectedHierarchyId] : undefined,
-    10
-  )
+  const { data: activities = [], isLoading: activitiesLoading } = useActivities(10)
 
-  const { data: prayers = [], isLoading: prayersLoading } = usePrayers(
-    selectedHierarchyId ? [selectedHierarchyId] : undefined
-  )
+  const { data: prayers = [], isLoading: prayersLoading } = usePrayers()
 
   const { prayedIds, toggleAmen } = useAmenActions(profile?.id || "")
 
   const t = translations[lang]
-
-  const selectedHierarchy = hierarchies.find((h) => h.id === selectedHierarchyId) || null
 
   const greetingName = profile?.name || "訪客"
   const greetingTitle = profile?.role === "admin" ? t.brother : t.brother
@@ -172,37 +153,6 @@ export default function HomePage() {
           <h1 className="text-xl font-semibold text-foreground">
             {t.greeting}，<span className="text-primary">{greetingName}</span> {greetingTitle}
           </h1>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-between bg-card hover:bg-accent"
-              >
-                <span>
-                  {selectedHierarchy
-                    ? (lang === "zh-Hant" ? selectedHierarchy.name_zh_hant : selectedHierarchy.name_zh_hans)
-                    : t.selectLevel}
-                </span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[calc(100vw-2rem)]">
-              {hierarchies.map((hierarchy) => (
-                <DropdownMenuItem
-                  key={hierarchy.id}
-                  onClick={() => setSelectedHierarchyId(hierarchy.id)}
-                  className={
-                    selectedHierarchyId === hierarchy.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  }
-                >
-                  {lang === "zh-Hant" ? hierarchy.name_zh_hant : hierarchy.name_zh_hans}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </section>
 
         <section className="grid grid-cols-2 gap-3">
@@ -296,14 +246,6 @@ export default function HomePage() {
             <Card className="bg-card border-border overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Badge
-                    variant="secondary"
-                    className="text-xs py-0.5 px-2 bg-primary/10 text-primary"
-                  >
-                    {lang === "zh-Hant"
-                      ? focusPrayer.hierarchy?.name_zh_hant
-                      : focusPrayer.hierarchy?.name_zh_hans}
-                  </Badge>
                   <span className="text-xs text-muted-foreground">
                     {getTimeLabel(focusPrayer.created_at)}
                   </span>

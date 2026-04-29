@@ -16,7 +16,6 @@ import {
   genderOptions,
   lifeStageOptions,
   sourceOptions,
-  mockStructureOptions,
 } from "@/lib/schemas/target"
 import type { Member } from "@/types/database"
 
@@ -24,7 +23,6 @@ interface MemberFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   member?: Member | null
-  hierarchyIds?: string[]
   onSuccess?: () => void
 }
 
@@ -49,7 +47,6 @@ export function MemberFormDialog({
       name: "",
       gender: undefined,
       category: "gospel_friend",
-      structure_id: "",
       status: "",
       life_stage: undefined,
       source: undefined,
@@ -69,7 +66,6 @@ export function MemberFormDialog({
         name: member.name_zh_hant || member.name_zh_hans || "",
         gender: member.gender,
         category: member.type === "gospel" ? "gospel_friend" : "little_sheep",
-        structure_id: member.hierarchy_id || "",
         status: member.status || "",
         life_stage: member.life_stage as CareTargetFormValues["life_stage"],
         source: member.source as CareTargetFormValues["source"],
@@ -83,7 +79,6 @@ export function MemberFormDialog({
         name: "",
         gender: undefined,
         category: "gospel_friend",
-        structure_id: "",
         status: "",
         life_stage: undefined,
         source: undefined,
@@ -124,7 +119,6 @@ export function MemberFormDialog({
         notes_zh_hans: data.notes || null,
         type: data.category === "gospel_friend" ? "gospel" : "new_believer",
         status: data.status || null,
-        hierarchy_id: data.structure_id,
       }
 
       if (isEdit && member) {
@@ -188,15 +182,6 @@ export function MemberFormDialog({
         onValueChange={(v) => setValue("category", v as "gospel_friend" | "little_sheep", { shouldValidate: true })}
         options={categoryOptions}
         error={errors.category?.message}
-      />
-
-      <SelectField
-        label="小排"
-        value={watch("structure_id")}
-        onValueChange={(v) => setValue("structure_id", v, { shouldValidate: true })}
-        options={mockStructureOptions}
-        placeholder="選擇小排"
-        error={errors.structure_id?.message}
       />
 
       <SelectField

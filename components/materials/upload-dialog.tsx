@@ -66,12 +66,15 @@ export function UploadMaterialDialog({
     setLoading(true)
 
     try {
-      await uploadMaterial(selectedFile, {
-        title_zh_hant: form.title_zh_hant,
-        title_zh_hans: form.title_zh_hans || form.title_zh_hant,
-        category: form.category,
-        type: form.type,
-        suitable_for: form.suitable_for || undefined,
+      await uploadMaterial({
+        file: selectedFile,
+        metadata: {
+          title_zh_hant: form.title_zh_hant,
+          title_zh_hans: form.title_zh_hans || form.title_zh_hant,
+          category: form.category,
+          type: form.type,
+          suitable_for: form.suitable_for || undefined,
+        },
       })
 
       setForm({
